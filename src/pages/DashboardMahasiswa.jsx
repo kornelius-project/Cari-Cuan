@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Briefcase, Clock, User, ChevronRight, TrendingUp, AlertCircle, 
-  ArrowDownLeft, ArrowUpRight, CheckCircle2, Wallet, X, Lock, Star,
-  ShieldCheck, ArrowRight, Zap, Sparkles, Filter
+  Briefcase, Clock, User, ChevronRight, AlertCircle, 
+  ArrowDownLeft, ArrowUpRight, CheckCircle2, Wallet, X, Lock,
+  ShieldCheck, Zap, Sparkles, GraduationCap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
