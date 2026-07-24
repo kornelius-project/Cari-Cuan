@@ -61,7 +61,7 @@ export default function DashboardUMKM() {
 
   // Form Posting
   const [formError, setFormError] = useState('');
-  const [formData, setFormData] = useState({ judul: '', tipeKerja: 'Part-Time', budget: '' });
+  const [formData, setFormData] = useState({ judul: '', tipeKerja: 'Part-Time', budget: '', deskripsi: '', persyaratan: '' });
 
   // --- HELPER FUNCTIONS ---
   const showToast = (message, type = 'success') => {
@@ -121,7 +121,7 @@ export default function DashboardUMKM() {
     }, ...daftarProyekUMKM]);
 
     showToast(`Pekerjaan diposting! Rp ${cost.toLocaleString('id-ID')} dialokasikan ke Dana Escrow Rekber.`);
-    setFormData({ judul: '', tipeKerja: 'Part-Time', budget: '' });
+    setFormData({ judul: '', tipeKerja: 'Part-Time', budget: '', deskripsi: '', persyaratan: '' });
   };
 
   const handleTerimaKandidat = (pelamarName) => {
@@ -709,6 +709,24 @@ export default function DashboardUMKM() {
                     <option>Part-Time (Pekerjaan Berdurasi)</option>
                     <option>Sayembara (Lomba Desain / Karya)</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Deskripsi Pekerjaan</label>
+                  <textarea 
+                    value={formData.deskripsi}
+                    onChange={e => setFormData({...formData, deskripsi: e.target.value})}
+                    placeholder="Jelaskan detail tugas yang harus dikerjakan..."
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-medium h-28 resize-none"
+                  ></textarea>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Persyaratan Khusus</label>
+                  <textarea 
+                    value={formData.persyaratan}
+                    onChange={e => setFormData({...formData, persyaratan: e.target.value})}
+                    placeholder="Keahlian, alat, atau kriteria khusus (Opsional)"
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-medium h-20 resize-none"
+                  ></textarea>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Anggaran / Upah (Rp)</label>

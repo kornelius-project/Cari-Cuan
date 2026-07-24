@@ -8,6 +8,8 @@ export default function CariLowongan() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [isApplyingSuccess, setIsApplyingSuccess] = useState(false); // State Lamaran Sukses
   const [isLoggedInState, setIsLoggedInState] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -524,7 +526,7 @@ export default function CariLowongan() {
                   <button 
                     onClick={() => {
                       if (isLoggedInState) {
-                        setIsApplyingSuccess(true);
+                        setShowApplyModal(true);
                       } else {
                         setShowLoginModal(true);
                       }
@@ -640,6 +642,58 @@ export default function CariLowongan() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL LAMAR PEKERJAAN (COVER LETTER) --- */}
+      {showApplyModal && (
+        <div className="fixed inset-0 bg-slate-900/70 z-50 flex justify-center items-center p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-indigo-900 text-white shrink-0">
+              <div>
+                <h2 className="text-xl font-extrabold">Form Lamaran Kerja</h2>
+                <p className="text-indigo-200 text-xs mt-1">
+                  Melamar: <span className="font-bold text-white">{selectedJob?.judul}</span>
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowApplyModal(false)} 
+                className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-full flex justify-center items-center transition text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <div className="mb-4 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-indigo-900 leading-relaxed font-medium">
+                  UMKM akan melihat profil dan keahlian Anda secara otomatis. Gunakan pesan pengantar di bawah ini untuk menonjolkan nilai plus Anda.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Pesan Pengantar (Cover Letter)</label>
+                <textarea 
+                  value={coverLetter}
+                  onChange={(e) => setCoverLetter(e.target.value)}
+                  placeholder="Ceritakan mengapa Anda cocok untuk pekerjaan ini, atau tawarkan negosiasi jika ada..."
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-medium h-40 resize-none"
+                ></textarea>
+              </div>
+
+              <button 
+                onClick={() => {
+                  setShowApplyModal(false);
+                  setIsApplyingSuccess(true);
+                  setCoverLetter('');
+                }}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer flex justify-center items-center gap-2 text-sm"
+              >
+                <Send className="w-4 h-4" /> Kirim Lamaran Sekarang
+              </button>
             </div>
           </div>
         </div>

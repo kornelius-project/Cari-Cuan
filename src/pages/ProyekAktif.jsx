@@ -13,6 +13,7 @@ export default function ProyekAktif() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [terkirim, setTerkirim] = useState(false);
+  const [isHandoverSubmitted, setIsHandoverSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ hari: 2, jam: 14, menit: 59 });
 
   // State Chat
@@ -202,11 +203,29 @@ export default function ProyekAktif() {
                   </form>
                 ) : (
                   <div className="flex-1 flex flex-col justify-center items-center text-center animate-in fade-in">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex justify-center items-center mb-4">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex justify-center items-center mb-4 shadow-inner">
                       <CheckCircle className="w-8 h-8 text-green-600" />
                     </div>
-                    <h3 className="font-bold text-gray-900 mb-1">Terkirim ke Klien</h3>
-                    <p className="text-gray-500 text-sm">Menunggu persetujuan Kopi Senja untuk pencairan dana.</p>
+                    <h3 className="font-extrabold text-gray-900 mb-2 text-lg">Draf Terkirim ke Klien</h3>
+                    
+                    {!isHandoverSubmitted ? (
+                      <>
+                        <p className="text-gray-500 text-sm mb-6 max-w-[250px]">Klien sedang meninjau draf Anda. Jika sudah final, silakan ajukan pencairan dana.</p>
+                        <button 
+                          onClick={() => setIsHandoverSubmitted(true)}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-xl shadow-lg transition shadow-indigo-600/20 text-sm cursor-pointer"
+                        >
+                          Tandai Selesai & Ajukan Pencairan Dana
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-indigo-50 border border-indigo-100 text-indigo-800 text-xs font-bold px-4 py-2.5 rounded-lg mb-2 flex items-center">
+                          <Clock className="w-4 h-4 mr-2" /> Menunggu Persetujuan Klien
+                        </div>
+                        <p className="text-gray-500 text-xs max-w-[250px]">Dana dari Escrow Rekber akan otomatis masuk ke Saldo Anda jika klien menyetujui.</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
