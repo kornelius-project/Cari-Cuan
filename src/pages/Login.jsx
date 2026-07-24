@@ -28,7 +28,7 @@ export default function Login() {
       if (role === 'umkm') {
         window.location.href = '/dashboard-umkm';
       } else {
-        window.location.href = '/dashboard';
+        window.location.href = '/lowongan';
       }
     }, 1500);
   };
