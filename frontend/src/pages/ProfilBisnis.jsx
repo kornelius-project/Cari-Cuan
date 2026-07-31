@@ -1,28 +1,63 @@
 import React, { useState } from 'react';
 import { 
   Store, MapPin, Phone, Mail, Building, 
-  Camera, CheckCircle, ShieldCheck, Save, Star
+  Camera, CheckCircle, ShieldCheck, Save, Star, Lock
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import Tesseract from 'tesseract.js';
 
 export default function ProfilBisnis() {
-  const [formData, setFormData] = useState({
-    namaBisnis: 'Kopi Senja',
-    kategori: 'Food & Beverage',
-    email: 'hello@kopisenja.com',
-    noHp: '081234567890',
-    alamat: 'Jl. Merdeka No. 45, Salatiga',
-    deskripsi: 'Kedai kopi lokal yang fokus pada pemberdayaan petani kopi Nusantara. Kami sering membutuhkan bantuan desain dan admin media sosial.'
+  const [formData, setFormData] = useState(() => {
+    const saved = JSON.parse(localStorage.getItem('umkmProfile')) || {};
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+    return {
+      namaBisnis: saved.namaBisnis || user.name || localStorage.getItem('userName') || '',
+      kategori: saved.kategori || '',
+      email: saved.email || user.email || '',
+      noHp: saved.noHp || '',
+      alamat: saved.alamat || '',
+      deskripsi: saved.deskripsi || '',
+      fotoProfil: saved.fotoProfil || null,
+      password: ''
+    };
   });
 
   const [isVerifying, setIsVerifying] = useState(false);
-  const [kycStatus, setKycStatus] = useState('verified'); // 'unverified', 'pending', 'verified'
+  const [kycStatus, setKycStatus] = useState('unverified'); // 'unverified', 'pending', 'verified'
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [verifyProgress, setVerifyProgress] = useState(0);
+  const [kycError, setKycError] = useState('');
+
+  React.useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    let isVerified = false;
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      isVerified = user.kycStatus === 'VERIFIED';
+    }
+
+    if (isVerified) {
+      setKycStatus('verified');
+    } else {
+      setKycStatus('unverified');
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, fotoProfil: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSave = (e) => {
@@ -31,16 +66,94 @@ export default function ProfilBisnis() {
     setTimeout(() => {
       setIsSaving(false);
       setShowSuccess(true);
+      
+      // Save to localStorage
+      localStorage.setItem('umkmProfile', JSON.stringify({
+        ...formData,
+        password: '' // Don't save password in local storage
+      }));
+      
+      let user = JSON.parse(localStorage.getItem('user')) || {};
+      user.name = formData.namaBisnis;
+      user.email = formData.email;
+      if (formData.password) {
+        user.password = formData.password;
+      }
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('userName', formData.namaBisnis);
+      window.dispatchEvent(new Event('storage'));
+      
+      setFormData(prev => ({ ...prev, password: '' }));
+
       setTimeout(() => setShowSuccess(false), 3000);
     }, 1000);
   };
 
-  const handleVerifyKYC = () => {
+  const handleKycUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
     setIsVerifying(true);
-    setTimeout(() => {
+    setVerifyProgress(0);
+    setKycError('');
+    
+    Tesseract.recognize(
+      file,
+      'ind',
+      {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            setVerifyProgress(Math.floor(m.progress * 100));
+          } else if (m.status === 'loading tesseract core' || m.status === 'initializing api') {
+            setVerifyProgress((prev) => prev < 10 ? prev + 1 : prev);
+          }
+        }
+      }
+    ).then(({ data: { text } }) => {
+      const upperText = text.toUpperCase();
+      const keywords = ['KTP', 'KARTU TANDA PENDUDUK', 'NIK', 'NIB', 'NOMOR INDUK BERUSAHA', 'PROVINSI'];
+      const isMatch = keywords.some(kw => upperText.includes(kw));
+
+      if (isMatch) {
+        // Panggil backend API agar DB ter-update
+        const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('ktp', file);
+        
+        fetch('http://localhost:5000/api/users/kyc', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        }).then(res => {
+          if (res.ok) {
+            setIsVerifying(false);
+            setKycStatus('verified');
+            localStorage.setItem('kycVerified', 'true');
+            let user = { role: localStorage.getItem('userRole') || 'umkm', kycStatus: 'UNVERIFIED' };
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+              user = JSON.parse(userStr);
+            }
+            user.kycStatus = 'VERIFIED';
+            localStorage.setItem('user', JSON.stringify(user));
+            window.dispatchEvent(new Event('storage'));
+          } else {
+            setIsVerifying(false);
+            setKycError('Gagal sinkronisasi dengan server.');
+          }
+        }).catch(err => {
+          setIsVerifying(false);
+          setKycError('Terjadi kesalahan koneksi saat verifikasi.');
+        });
+      } else {
+        setIsVerifying(false);
+        setKycError('Sistem tidak mengenali ini sebagai KTP atau NIB. Pastikan teks terlihat jelas.');
+      }
+    }).catch((err) => {
+      console.error(err);
       setIsVerifying(false);
-      setKycStatus('pending');
-    }, 1500);
+      setKycError('Terjadi kesalahan saat memproses gambar. Silakan coba lagi.');
+    });
   };
 
   return (
@@ -72,20 +185,21 @@ export default function ProfilBisnis() {
             <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center text-center">
               <div className="relative mb-6">
                 <img 
-                  src="https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=200&q=80" 
+                  src={formData.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.namaBisnis || 'UMKM')}&background=c7d2fe&color=3730a3&bold=true&size=200`}
                   alt="Logo Bisnis" 
-                  className="w-32 h-32 rounded-full object-cover border-4 border-slate-50 shadow-md"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
                 />
-                <button className="absolute bottom-0 right-0 bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 transition shadow-lg border-2 border-white">
+                <label className="absolute bottom-0 right-0 bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 transition shadow-lg border-2 border-white cursor-pointer">
                   <Camera className="w-4 h-4" />
-                </button>
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                </label>
               </div>
               <h2 className="text-xl font-black text-slate-900">{formData.namaBisnis}</h2>
               <p className="text-slate-500 font-medium mb-4">{formData.kategori}</p>
               
               <div className="flex items-center justify-center gap-1 bg-amber-50 text-amber-600 px-4 py-1.5 rounded-full font-bold text-sm">
                 <Star className="w-4 h-4 fill-current" />
-                4.9/5 (12 Ulasan)
+                0/5 (0 Ulasan)
               </div>
             </div>
 
@@ -97,25 +211,54 @@ export default function ProfilBisnis() {
               </h3>
               
               {kycStatus === 'verified' && (
-                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-start gap-3">
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-start gap-3 relative">
                   <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold text-emerald-800 text-sm mb-1">Usaha Terverifikasi</p>
                     <p className="text-xs text-emerald-600 leading-relaxed">NIB / KTP Anda telah divalidasi. Mahasiswa lebih percaya bekerja dengan UMKM terverifikasi.</p>
                   </div>
+                  <button 
+                    onClick={() => {
+                      setKycStatus('unverified');
+                      localStorage.removeItem('kycVerified');
+                      let user = { role: localStorage.getItem('userRole') || 'umkm', kycStatus: 'VERIFIED' };
+                      const userStr = localStorage.getItem('user');
+                      if (userStr) {
+                        user = JSON.parse(userStr);
+                      }
+                      user.kycStatus = 'UNVERIFIED';
+                      localStorage.setItem('user', JSON.stringify(user));
+                      window.dispatchEvent(new Event('storage'));
+                    }} 
+                    className="absolute top-2 right-2 text-[10px] text-emerald-700 font-bold underline hover:text-emerald-900"
+                    title="Hanya untuk keperluan testing"
+                  >
+                    Reset
+                  </button>
                 </div>
               )}
 
               {kycStatus === 'unverified' && (
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
                   <p className="text-sm font-medium text-slate-600 mb-4">Unggah dokumen NIB atau KTP Pemilik untuk mendapatkan lencana Terpercaya.</p>
-                  <button 
-                    onClick={handleVerifyKYC}
-                    disabled={isVerifying}
-                    className="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold hover:bg-slate-800 transition text-sm disabled:opacity-50"
-                  >
-                    {isVerifying ? 'Mengunggah...' : 'Verifikasi Sekarang'}
-                  </button>
+                  
+                  {kycError && (
+                    <div className="mb-4 text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-lg text-left">
+                      {kycError}
+                    </div>
+                  )}
+
+                  {isVerifying ? (
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 mb-2 mt-4 overflow-hidden">
+                      <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${verifyProgress}%` }}></div>
+                      <p className="text-xs text-slate-500 mt-2 font-bold">Menganalisis Dokumen... {verifyProgress}%</p>
+                    </div>
+                  ) : (
+                    <label className="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold hover:bg-slate-800 transition text-sm cursor-pointer block">
+                      Unggah Dokumen
+                      <input type="file" accept="image/*" className="hidden" onChange={handleKycUpload} />
+                    </label>
+                  )}
                 </div>
               )}
 
@@ -160,6 +303,7 @@ export default function ProfilBisnis() {
                       onChange={handleChange}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition font-medium text-slate-800"
                     >
+                      <option value="" disabled>Pilih Kategori</option>
                       <option value="Food & Beverage">Food & Beverage</option>
                       <option value="Retail & Fashion">Retail & Fashion</option>
                       <option value="Jasa & Layanan">Jasa & Layanan</option>
@@ -198,18 +342,33 @@ export default function ProfilBisnis() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
-                    <MapPin className="w-4 h-4 mr-2 text-slate-400" /> Alamat Lengkap
-                  </label>
-                  <textarea 
-                    name="alamat"
-                    value={formData.alamat}
-                    onChange={handleChange}
-                    rows="2"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition font-medium resize-none"
-                    required
-                  ></textarea>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                      <MapPin className="w-4 h-4 mr-2 text-slate-400" /> Alamat Lengkap
+                    </label>
+                    <textarea 
+                      name="alamat"
+                      value={formData.alamat}
+                      onChange={handleChange}
+                      rows="2"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition font-medium resize-none"
+                      required
+                    ></textarea>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                      <Lock className="w-4 h-4 mr-2 text-slate-400" /> Ganti Password
+                    </label>
+                    <input 
+                      type="password" 
+                      name="password"
+                      value={formData.password || ''}
+                      onChange={handleChange}
+                      placeholder="Kosongkan jika tidak diganti"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition font-medium"
+                    />
+                  </div>
                 </div>
 
                 <div>

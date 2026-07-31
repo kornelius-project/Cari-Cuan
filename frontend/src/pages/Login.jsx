@@ -28,15 +28,14 @@ export default function Login() {
 
       if (response.ok) {
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('token', data.token);
 
-        if (data.user.role === 'umkm') {
-          window.location.href = '/dashboard-umkm';
-        } else {
-          window.location.href = '/lowongan';
-        }
+        // Redirect ke landing page
+        window.location.href = '/';
       } else {
         alert(data.error || 'Login gagal');
       }

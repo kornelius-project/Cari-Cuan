@@ -13,6 +13,9 @@ model User {
   password  String
   name      String
   role      String   // 'mahasiswa' or 'umkm'
+  balance   Float    @default(0)
+  kycStatus String   @default("UNVERIFIED") // 'UNVERIFIED', 'PENDING', 'VERIFIED'
+  ktpImageUrl String?
   createdAt DateTime @default(now())
 
   // Relations
@@ -20,6 +23,7 @@ model User {
   applications Application[] @relation("MahasiswaApplications")
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+  transactions     Transaction[]
 }
 
 model Job {
@@ -29,6 +33,7 @@ model Job {
   salary      String?
   location    String?
   type        String?  // 'Part-time', 'Freelance', 'Full-time'
+  imageUrl    String?
   status      String   @default("open") // 'open', 'closed'
   createdAt   DateTime @default(now())
 
@@ -39,15 +44,19 @@ model Job {
 }
 
 model Application {
-  id          Int      @id @default(autoincrement())
-  status      String   @default("menunggu") // 'menunggu', 'diterima', 'ditolak'
-  createdAt   DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  status        String   @default("menunggu") // 'menunggu', 'diterima', 'ditolak'
+  submissionUrl String?  // Untuk tipe kerja Sayembara (Link ke karya yang diberi watermark)
+  coverLetter   String?  // Untuk tipe kerja Part-Time
+  createdAt     DateTime @default(now())
 
   // Relations
   jobId       Int
   job         Job      @relation(fields: [jobId], references: [id])
   mahasiswaId Int
   mahasiswa   User     @relation("MahasiswaApplications", fields: [mahasiswaId], references: [id])
+
+  @@unique([jobId, mahasiswaId])
 }
 
 model Message {
@@ -59,4 +68,15 @@ model Message {
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiverId Int
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  amount      Float
+  type        String   // 'Masuk', 'Keluar'
+  description String
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
 }

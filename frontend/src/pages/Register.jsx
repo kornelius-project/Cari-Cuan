@@ -25,15 +25,14 @@ export default function Register() {
 
       if (response.ok) {
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('token', data.token);
 
-        if (role === 'umkm') {
-          window.location.href = '/dashboard-umkm';
-        } else {
-          window.location.href = '/dashboard';
-        }
+        // Redirect ke landing page
+        window.location.href = '/';
       } else {
         alert(data.error || 'Gagal mendaftar');
       }
@@ -109,6 +108,12 @@ export default function Register() {
               Masuk di sini
             </Link>
           </div>
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link to="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition font-medium">
+            <ChevronLeft className="w-4 h-4 mr-1" /> Kembali ke Halaman Utama
+          </Link>
         </div>
       </div>
     </div>

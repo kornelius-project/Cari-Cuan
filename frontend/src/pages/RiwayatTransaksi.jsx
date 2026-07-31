@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Receipt, ArrowUpRight, ArrowDownRight, Clock, 
   CheckCircle, Download, FileText, Search, Filter 
@@ -9,48 +9,43 @@ import Footer from '../components/Footer';
 export default function RiwayatTransaksi() {
   const [filter, setFilter] = useState('Semua');
 
-  const transactions = [
-    {
-      id: "TRX-20230915-001",
-      tanggal: "15 Sep 2023, 14:30",
-      deskripsi: "Pembayaran Escrow - Desain Logo Kedai Kopi",
-      freelancer: "Menunggu Kandidat",
-      nominal: 150000,
-      tipe: "Keluar", // Uang masuk ke sistem Escrow
-      status: "Tertahan di Escrow"
-    },
-    {
-      id: "TRX-20230910-089",
-      tanggal: "10 Sep 2023, 09:15",
-      deskripsi: "Pelepasan Dana Escrow - Admin Sosial Media",
-      freelancer: "Siti Aminah",
-      nominal: 300000,
-      tipe: "Selesai", // Dana sudah diteruskan
-      status: "Selesai"
-    },
-    {
-      id: "TRX-20230825-042",
-      tanggal: "25 Agu 2023, 16:45",
-      deskripsi: "Pelepasan Dana Escrow - Pembuatan Website Katalog",
-      freelancer: "Andi Saputra",
-      nominal: 1500000,
-      tipe: "Selesai",
-      status: "Selesai"
-    },
-    {
-      id: "TRX-20230801-011",
-      tanggal: "01 Agu 2023, 10:00",
-      deskripsi: "Pengembalian Dana (Refund) - Proyek Dibatalkan",
-      freelancer: "Sistem",
-      nominal: 200000,
-      tipe: "Masuk", // Uang kembali ke UMKM
-      status: "Dikembalikan"
-    }
-  ];
+  const [transactions, setTransactions] = useState([]);
+  const [totalPengeluaran, setTotalPengeluaran] = useState(0);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await fetch('http://localhost:5000/api/wallet', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const rawTrx = data.transactions || [];
+          const mappedTrx = rawTrx.map(t => ({
+            id: t.id,
+            tanggal: t.createdAt,
+            keterangan: t.description,
+            jenis: (t.type === 'Topup' || t.type === 'Income') ? 'Masuk' : (t.type === 'Info' ? 'Info' : 'Keluar'),
+            nominal: t.amount
+          }));
+          setTransactions(mappedTrx);
+          const totalOut = mappedTrx
+            .filter(t => t.jenis === 'Keluar')
+            .reduce((sum, t) => sum + t.nominal, 0);
+          setTotalPengeluaran(totalOut);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchWallet();
+  }, []);
 
   const filteredData = filter === 'Semua' 
     ? transactions 
-    : transactions.filter(t => t.status === filter);
+    : transactions.filter(t => t.jenis === filter);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
@@ -72,7 +67,7 @@ export default function RiwayatTransaksi() {
             </div>
             <div>
               <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Pengeluaran</p>
-              <p className="text-2xl font-black text-slate-900">Rp 1.950.000</p>
+              <p className="text-2xl font-black text-slate-900">Rp {totalPengeluaran.toLocaleString('id-ID')}</p>
             </div>
           </div>
           
@@ -82,7 +77,7 @@ export default function RiwayatTransaksi() {
             </div>
             <div>
               <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Tertahan (Escrow)</p>
-              <p className="text-2xl font-black text-slate-900">Rp 150.000</p>
+              <p className="text-2xl font-black text-slate-900">Rp 0</p>
             </div>
           </div>
 
@@ -92,7 +87,7 @@ export default function RiwayatTransaksi() {
             </div>
             <div>
               <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Dana Dikembalikan</p>
-              <p className="text-2xl font-black text-slate-900">Rp 200.000</p>
+              <p className="text-2xl font-black text-slate-900">Rp 0</p>
             </div>
           </div>
         </div>
@@ -101,7 +96,7 @@ export default function RiwayatTransaksi() {
         <div className="bg-white rounded-3xl p-2 sm:p-8 shadow-sm border border-slate-100">
           <div className="px-4 pt-4 sm:px-0 sm:pt-0 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl">
-              {['Semua', 'Tertahan di Escrow', 'Selesai', 'Dikembalikan'].map(opt => (
+              {['Semua', 'Masuk', 'Keluar'].map(opt => (
                 <button 
                   key={opt}
                   onClick={() => setFilter(opt)}
@@ -138,21 +133,21 @@ export default function RiwayatTransaksi() {
                   <tr key={trx.id} className="hover:bg-slate-50/50 transition">
                     <td className="px-6 py-5">
                       <p className="font-bold text-slate-900 text-sm">{trx.id}</p>
-                      <p className="text-xs text-slate-500 mt-1">{trx.tanggal}</p>
+                      <p className="text-xs text-slate-500 mt-1">{new Date(trx.tanggal).toLocaleString('id-ID')}</p>
                     </td>
                     <td className="px-6 py-5">
-                      <p className="font-bold text-slate-800 text-sm">{trx.deskripsi}</p>
+                      <p className="font-bold text-slate-800 text-sm">{trx.keterangan}</p>
                       <p className="text-xs text-slate-500 mt-1 flex items-center">
-                        <UserIcon className="w-3 h-3 mr-1" /> {trx.freelancer}
+                        <UserIcon className="w-3 h-3 mr-1" /> Sistem / Rekber
                       </p>
                     </td>
                     <td className="px-6 py-5">
-                      <p className={`font-black ${trx.tipe === 'Masuk' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                        {trx.tipe === 'Masuk' ? '+' : ''} Rp {trx.nominal.toLocaleString('id-ID')}
+                      <p className={`font-black ${trx.jenis === 'Masuk' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                        {trx.jenis === 'Masuk' ? '+' : ''} Rp {trx.nominal.toLocaleString('id-ID')}
                       </p>
                     </td>
                     <td className="px-6 py-5">
-                      <StatusBadge status={trx.status} />
+                      <StatusBadge status={trx.jenis === 'Masuk' ? 'Selesai' : 'Selesai'} />
                     </td>
                     <td className="px-6 py-5 text-right">
                       <button className="inline-flex items-center justify-center p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition" title="Unduh Invoice">

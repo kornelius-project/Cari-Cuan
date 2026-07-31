@@ -79,31 +79,29 @@ export default function Chat() {
       if (contact) {
         setActiveChatDetails(contact);
       } else {
-        // Fallback: If not in contacts, fetch all users and find them
-        fetch('http://localhost:5000/api/users')
+        // Fallback: If not in contacts, fetch the user details
+        fetch(`http://localhost:5000/api/users/${activeChat}`)
           .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              const u = data.find(user => user.id === activeChat);
-              if (u) {
-                setActiveChatDetails({
-                  id: u.id,
-                  name: u.name,
-                  role: u.role,
-                  avatar: u.role === 'umkm' 
-                    ? "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=100&q=80"
-                    : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80"
-                });
-                // Add to contacts temporarily
-                setContacts(prev => [{
-                  id: u.id,
-                  name: u.name,
-                  role: u.role,
-                  avatar: u.role === 'umkm' 
-                    ? "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=100&q=80"
-                    : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80"
-                }, ...prev]);
-              }
+          .then(u => {
+            if (u && !u.error) {
+              setActiveChatDetails({
+                id: u.id,
+                name: u.name,
+                role: u.role,
+                avatar: u.role === 'umkm' 
+                  ? "/freelance6.jpg"
+                  : "/freelance1.png"
+              });
+              // Add to contacts temporarily
+              setContacts(prev => [{
+                id: u.id,
+                name: u.name,
+                role: u.role,
+                avatar: u.role === 'umkm' 
+                  ? "/freelance6.jpg"
+                  : "/freelance1.png",
+                lastMessage: null
+              }, ...prev]);
             }
           })
           .catch(console.error);

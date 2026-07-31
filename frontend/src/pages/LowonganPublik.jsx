@@ -11,7 +11,7 @@ export default function LowonganPublik() {
       waktu: "3 Hari", 
       umkm: "Kopi Senja", 
       kategori: "Desain Grafis",
-      image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80",
+      image: "/freelance3.png",
       deskripsi: "Kami membutuhkan desainer kreatif untuk merombak logo kedai kopi kami agar terlihat lebih modern, kekinian, dan cocok untuk dicetak di gelas plastik."
     },
     { 
@@ -21,7 +21,7 @@ export default function LowonganPublik() {
       waktu: "7 Hari", 
       umkm: "Toko Baju Nabila", 
       kategori: "Digital Marketing",
-      image: "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=400&q=80",
+      image: "/freelance4.png",
       deskripsi: "Dicari mahasiswa yang paham algoritma Instagram dan TikTok untuk membalas DM, membuat caption, dan memposting konten selama 7 hari berturut-turut."
     },
     { 
@@ -31,7 +31,7 @@ export default function LowonganPublik() {
       waktu: "1 Hari", 
       umkm: "Bimbel Juara", 
       kategori: "Jasa Fisik",
-      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=400&q=80",
+      image: "/freelance5.png",
       deskripsi: "Tugas lapangan: Menyebarkan 100 lembar brosur bimbingan belajar kepada mahasiswa baru di area fakultas atau kantin. Bukti berupa foto dokumentasi."
     },
   ];

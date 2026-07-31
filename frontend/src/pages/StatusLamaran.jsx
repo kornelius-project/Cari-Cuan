@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Briefcase, Clock, XCircle, CheckCircle, ChevronRight, MapPin, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -7,48 +7,59 @@ import Footer from '../components/Footer';
 export default function StatusLamaran() {
   const [filter, setFilter] = useState('Semua');
 
-  const lamaran = [
-    {
-      id: 1,
-      judul: "Desain Logo Kedai Kopi",
-      umkm: "Kopi Senja",
-      lokasi: "Tingkir, Salatiga (Remote)",
-      waktuLamar: "2 hari lalu",
-      status: "Diterima",
-      pesan: "Selamat! UMKM Kopi Senja menyetujui portofolio Anda. Silakan mulai bekerja sesuai instruksi.",
-      link: "/proyek-aktif?type=lepas"
-    },
-    {
-      id: 4,
-      judul: "Admin Sosial Media Instagram",
-      umkm: "Butik Nabila",
-      lokasi: "Sidorejo, Salatiga (Remote)",
-      waktuLamar: "3 hari lalu",
-      status: "Diterima",
-      pesan: "Selamat! Anda diterima sebagai Admin Sosial Media Part-Time selama 1 bulan. Silakan masuk ke ruang koordinasi.",
-      link: "/proyek-aktif?type=part-time"
-    },
-    {
-      id: 2,
-      judul: "Admin Sosial Media Instagram",
-      umkm: "Butik Nabila",
-      lokasi: "Sidorejo, Salatiga (Remote)",
-      waktuLamar: "1 hari lalu",
-      status: "Menunggu",
-      pesan: "Lamaran Anda sudah terkirim dan sedang menunggu keputusan dari pihak UMKM.",
-      link: null
-    },
-    {
-      id: 3,
-      judul: "Fotografer Produk Sepatu",
-      umkm: "Langkah Pasti Store",
-      lokasi: "Argomulyo, Salatiga (Di Tempat)",
-      waktuLamar: "1 minggu lalu",
-      status: "Ditolak",
-      pesan: "Mohon maaf, UMKM telah memilih kandidat lain yang lebih sesuai dengan kebutuhan mereka. Tetap semangat!",
-      link: null
-    }
-  ];
+  const [lamaran, setLamaran] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLamaran = async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        if (!userId) return;
+        const response = await fetch(`http://localhost:5000/api/applications/mahasiswa/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const mappedData = data.map(app => {
+            let statusText = 'Menunggu';
+            if (app.status === 'APPROVED') statusText = 'Diterima';
+            if (app.status === 'REJECTED') statusText = 'Ditolak';
+            
+            let pesan = 'Lamaran Anda sudah terkirim dan sedang menunggu keputusan dari pihak UMKM.';
+            let link = null;
+
+              if (app.status === 'APPROVED') {
+                if (app.job?.type === 'Sayembara') {
+                  pesan = 'Selamat! Karya Sayembara Anda telah dipilih oleh UMKM. Dana kompensasi telah berhasil ditransfer ke saldo dompet Anda.';
+                  link = null; // Tidak perlu ke proyek aktif karena sudah selesai
+                } else {
+                  pesan = 'Selamat! UMKM menyetujui lamaran part-time Anda. Silakan koordinasikan pekerjaan melalui Chat.';
+                  link = app.job?.umkm?.id ? `/chat?userId=${app.job.umkm.id}` : '/chat';
+                }
+              }
+            if (app.status === 'REJECTED') {
+              pesan = 'Mohon maaf, UMKM telah memilih kandidat lain yang lebih sesuai dengan kebutuhan mereka. Tetap semangat!';
+            }
+            
+            return {
+              id: app.id,
+              judul: app.job?.title || 'Posisi',
+              umkm: app.job?.umkm?.name || 'UMKM',
+              lokasi: app.job?.location || 'Remote',
+              waktuLamar: new Date(app.createdAt).toLocaleDateString(),
+              status: statusText,
+              pesan: pesan,
+              link: link
+            };
+          });
+          setLamaran(mappedData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch applications:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLamaran();
+  }, []);
 
   const filteredLamaran = filter === 'Semua' ? lamaran : lamaran.filter(l => l.status === filter);
 
@@ -90,6 +101,13 @@ export default function StatusLamaran() {
 
         {/* DAFTAR LAMARAN */}
         <div className="space-y-6">
+          {loading ? (
+            <div className="text-center py-20 bg-white rounded-3xl border border-gray-200 border-dashed">
+              <Clock className="w-10 h-10 text-gray-300 mx-auto mb-4 animate-spin" />
+              <h3 className="text-xl font-bold text-gray-500">Memuat Lamaran...</h3>
+            </div>
+          ) : (
+            <>
           {filteredLamaran.map((job) => (
             <div key={job.id} className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 md:p-8 flex flex-col md:flex-row justify-between items-start gap-6 hover:shadow-md transition">
               
@@ -128,9 +146,9 @@ export default function StatusLamaran() {
 
               {/* ACTION BUTTON */}
               <div className="w-full md:w-auto flex-shrink-0 pt-2">
-                {job.status === 'Diterima' ? (
+                {job.status === 'Diterima' && job.link ? (
                   <Link to={job.link} className="w-full md:w-auto block bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-blue-700 hover:-translate-y-1 transition text-center flex items-center justify-center">
-                    Buka Ruang Kerja <ChevronRight className="w-4 h-4 ml-1" />
+                    Hubungi UMKM (Chat) <ChevronRight className="w-4 h-4 ml-1" />
                   </Link>
                 ) : job.status === 'Ditolak' ? (
                   <Link to="/lowongan" className="w-full md:w-auto block bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition text-center">
@@ -154,7 +172,9 @@ export default function StatusLamaran() {
                <Link to="/lowongan" className="inline-flex bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition">
                  Cari Lowongan Sekarang
                </Link>
-             </div>
+              </div>
+           )}
+           </>
           )}
         </div>
 

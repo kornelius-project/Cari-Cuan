@@ -9,12 +9,29 @@ import Footer from '../components/Footer';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const userRole = localStorage.getItem('userRole');
+
+  let heroTitle = (
+    <>Solusi Kerja Lepas <br className="hidden sm:inline" />
+    <span className="text-indigo-600">Aman & Terpercaya</span> Untuk Semua.</>
+  );
+  let heroDesc = "Hubungkan talenta mahasiswa berbakat dengan pemilik usaha UMKM lokal. Mahasiswa mendapatkan penghasilan tambahan tanpa mengganggu kuliah, dan UMKM dapat menyelesaikan kebutuhan operasional bisnis secara cepat, efisien, serta terjamin.";
+
+  if (isLoggedIn && userRole === 'umkm') {
+    heroTitle = (
+      <>Temukan <span className="text-indigo-600">Talenta Mahasiswa</span><br className="hidden sm:inline" /> Terbaik untuk Bisnis Anda.</>
+    );
+    heroDesc = "Perluas jangkauan operasional bisnis Anda dengan bantuan tenaga freelance mahasiswa. Sistem kerja fleksibel yang menghemat biaya sekaligus memberikan hasil maksimal untuk usaha Anda.";
+  } else if (isLoggedIn && userRole === 'mahasiswa') {
+    heroTitle = (
+      <>Ubah Waktu Luang <br className="hidden sm:inline" /><span className="text-indigo-600">Menjadi Penghasilan</span> Tambahan.</>
+    );
+    heroDesc = "Ribuan pekerjaan Part-Time dan proyek Sayembara dari UMKM lokal siap dikerjakan. Tambah pengalaman kerja dan penghasilan tanpa mengganggu jadwal kuliah.";
+  }
 
   const handlePostingProyekClick = (e) => {
     e.preventDefault();
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const userRole = localStorage.getItem('userRole');
-
     if (!isLoggedIn) {
       navigate('/login?role=umkm');
       return;
@@ -30,7 +47,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 animate-landing-fade-in font-sans text-slate-800 selection:bg-indigo-500 selection:text-white">
       <Navbar />
 
       {/* HERO SECTION MARKETING (SPACIOUS & LUXURIOUS) */}
@@ -46,29 +63,32 @@ export default function Landing() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15]">
-              Solusi Kerja Lepas <br className="hidden sm:inline" />
-              <span className="text-indigo-600">Aman & Terpercaya</span> Untuk Semua.
+              {heroTitle}
             </h1>
 
             <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
-              Hubungkan talenta mahasiswa berbakat dengan pemilik usaha UMKM lokal. Mahasiswa mendapatkan penghasilan tambahan tanpa mengganggu kuliah, dan UMKM dapat menyelesaikan kebutuhan operasional bisnis secara cepat, efisien, serta terjamin.
+              {heroDesc}
             </p>
             
             {/* Dual CTAs (CLEAN SINGLE LINE) */}
             <div className="pt-2 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link 
-                to="/lowongan" 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-4 rounded-xl font-extrabold text-sm sm:text-base transition shadow-md hover:shadow-lg flex items-center justify-center gap-2.5 whitespace-nowrap cursor-pointer shrink-0"
-              >
-                <Search className="w-5 h-5 shrink-0" /> Cari Lowongan Kerja
-              </Link>
+              {(!isLoggedIn || userRole === 'mahasiswa') && (
+                <Link 
+                  to="/lowongan" 
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-4 rounded-xl font-extrabold text-sm sm:text-base transition shadow-md hover:shadow-lg flex items-center justify-center gap-2.5 whitespace-nowrap cursor-pointer shrink-0"
+                >
+                  <Search className="w-5 h-5 shrink-0" /> Cari Lowongan Kerja
+                </Link>
+              )}
               
-              <button 
-                onClick={handlePostingProyekClick} 
-                className="bg-slate-900 hover:bg-slate-800 text-white px-7 py-4 rounded-xl font-extrabold text-sm sm:text-base transition shadow-md hover:shadow-lg flex items-center justify-center gap-2.5 whitespace-nowrap cursor-pointer shrink-0"
-              >
-                <Briefcase className="w-5 h-5 text-amber-400 shrink-0" /> Posting Proyek UMKM
-              </button>
+              {(!isLoggedIn || userRole === 'umkm') && (
+                <button 
+                  onClick={handlePostingProyekClick} 
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-7 py-4 rounded-xl font-extrabold text-sm sm:text-base transition shadow-md hover:shadow-lg flex items-center justify-center gap-2.5 whitespace-nowrap cursor-pointer shrink-0"
+                >
+                  <Briefcase className="w-5 h-5 text-amber-400 shrink-0" /> {isLoggedIn ? 'Posting Proyek Baru' : 'Posting Proyek UMKM'}
+                </button>
+              )}
             </div>
 
             {/* Micro Guarantee Note */}
@@ -82,7 +102,7 @@ export default function Landing() {
           <div className="flex-1 w-full max-w-xl lg:max-w-none relative">
             <div className="bg-slate-100 rounded-3xl p-3.5 border border-slate-200/90 shadow-lg">
               <img 
-                src="/freelance.jpg" 
+                src="/freelance2.png" 
                 alt="Mahasiswa Bekerja Freelance" 
                 className="rounded-2xl shadow-sm object-cover h-[420px] w-full" 
               />

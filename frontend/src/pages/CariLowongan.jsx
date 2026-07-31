@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Clock, Lock, X, FileText, CheckCircle, Search, Filter, Briefcase, Bookmark, AlertCircle, ChevronDown, LogIn, Send } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { MapPin, Clock, Lock, X, FileText, CheckCircle, Search, Filter, Briefcase, Bookmark, AlertCircle, ChevronDown, LogIn, Send, ShieldCheck, MessageSquare } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -10,11 +10,13 @@ export default function CariLowongan() {
   const [isLoggedInState, setIsLoggedInState] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
+  const [submissionFile, setSubmissionFile] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [kycVerified, setKycVerified] = useState(false);
   const navigate = useNavigate();
 
   const handleInlineLogin = async (e) => {
@@ -32,9 +34,11 @@ export default function CariLowongan() {
         localStorage.setItem('userRole', 'mahasiswa');
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         setIsLoggedInState(true);
+        setKycVerified(data.user.kycStatus === 'VERIFIED');
         setShowLoginModal(false);
-        setIsApplyingSuccess(true);
         window.dispatchEvent(new Event('storage'));
       } else {
         alert(data.error || 'Login gagal');
@@ -49,6 +53,11 @@ export default function CariLowongan() {
   const [ALL_JOBS, setAllJobs] = useState([]);
 
   useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setKycVerified(user.kycStatus === 'VERIFIED');
+    }
     fetch('http://localhost:5000/api/jobs')
       .then(res => res.json())
       .then(data => {
@@ -58,7 +67,8 @@ export default function CariLowongan() {
           harga: job.salary || "Rp 0",
           durasi: "Sesuai kesepakatan", 
           umkm: job.umkm?.name || "UMKM",
-          logoPerusahaan: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=150&q=80",
+          umkmId: job.umkm?.id,
+          logoPerusahaan: job.imageUrl || "/freelance6.jpg",
           kategori: "Kategori Lain",
           tipeKerja: job.type || "Proyek Lepas",
           lokasi: job.location || "Remote",
@@ -127,23 +137,23 @@ export default function CariLowongan() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+    <div className="min-h-screen font-sans bg-slate-50 flex flex-col">
       <Navbar />
 
       {/* HEADER BURSA KERJA */}
-      <header className="bg-white border-b border-gray-200 py-8">
-        <div className="max-w-7xl mx-auto px-6">
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Cari Lowongan UMKM</h1>
-          <p className="text-gray-500">Temukan proyek lepas dari UMKM lokal yang cocok dengan jadwal kuliah Anda.</p>
+      <header className="bg-white border-b border-slate-200 py-10">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Cari Lowongan Pekerjaan</h1>
+          <p className="text-slate-500 font-medium">Temukan proyek part-time dan sayembara dari UMKM lokal yang cocok untuk Anda.</p>
         </div>
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8 flex flex-col lg:flex-row gap-6 lg:gap-8">
+      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
         
         {/* SIDEBAR FILTER (RESPONSIVE FOR MOBILE) */}
         <aside className="w-full lg:w-64 shrink-0">
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 lg:sticky lg:top-24 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 lg:sticky lg:top-24 shadow-sm">
             <div 
               onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
               className="flex items-center justify-between gap-2 mb-4 lg:mb-6 border-b border-slate-100 pb-3 lg:pb-4 cursor-pointer lg:cursor-default"
@@ -235,34 +245,34 @@ export default function CariLowongan() {
         <section className="flex-1 min-w-0">
           
           {/* Main Search Bar (Responsive) */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-2 mb-6 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="bg-white border border-slate-200 rounded-xl p-2 mb-6 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <div className="flex-1 relative">
-              <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-4 top-3.5 text-slate-400" />
               <input 
                 type="text" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Cari lowongan desain, admin, kasir..." 
-                className="w-full pl-12 pr-4 py-3 bg-transparent outline-none text-slate-800 placeholder-slate-400 text-xs sm:text-sm font-medium"
+                className="w-full pl-10 pr-4 py-2.5 bg-transparent outline-none text-slate-900 placeholder-slate-400 text-sm font-medium"
               />
             </div>
-            <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md shrink-0 transition">
+            <button className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-semibold text-sm shadow-sm shrink-0 transition">
               Cari Pekerjaan
             </button>
           </div>
 
           {/* Tips Banner */}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start md:items-center gap-4 mb-6">
-            <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1 md:mt-0" />
-            <p className="text-blue-900 text-sm">
-              <strong>Tips Melamar:</strong> UMKM lebih menyukai mahasiswa yang melampirkan portofolio atau tugas kuliah yang relevan dengan pekerjaan yang dilamar. Pastikan profil Anda lengkap!
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 flex items-start md:items-center gap-4 mb-6">
+            <AlertCircle className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5 md:mt-0" />
+            <p className="text-slate-700 text-sm font-medium">
+              UMKM lebih menyukai kandidat dengan pesan pengantar yang jelas dan ringkas.
             </p>
           </div>
 
           <div className="flex justify-between items-center mb-4">
-            <p className="text-gray-500 text-sm font-medium">Menampilkan <span className="font-bold text-gray-900">{filteredJobs.length}</span> lowongan aktif</p>
-            <div className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-gray-900">
-              Urutkan: <span className="font-bold">Terbaru</span> <ChevronDown className="w-4 h-4" />
+            <p className="text-slate-500 text-sm font-medium">Menampilkan <span className="font-bold text-slate-900">{filteredJobs.length}</span> lowongan aktif</p>
+            <div className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer hover:text-slate-900 font-medium">
+              Urutkan: <span className="font-semibold text-slate-900">Terbaru</span> <ChevronDown className="w-4 h-4" />
             </div>
           </div>
 
@@ -279,56 +289,51 @@ export default function CariLowongan() {
                 <div 
                   key={job.id} 
                   onClick={() => setSelectedJob(job)}
-                  className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+                  className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-colors cursor-pointer group shadow-sm flex flex-col md:flex-row gap-5"
                 >
-                  <div className="flex flex-col md:flex-row gap-5">
-                    {/* Logo UMKM (Gambar/Lambang Perusahaan) */}
-                    <img 
-                      src={job.logoPerusahaan} 
-                      alt={job.umkm} 
-                      className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-200 shadow-sm"
-                    />
-  
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition">{job.judul}</h3>
-                        <button className="text-gray-300 hover:text-blue-600 transition hidden md:block">
-                          <Bookmark className="w-5 h-5" />
-                        </button>
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 mb-3">
-                        <span className={`font-bold px-2 py-0.5 rounded text-xs ${job.tipeKerja === 'Proyek Lepas' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'}`}>
-                          {job.tipeKerja}
+                  <img 
+                    src={job.logoPerusahaan} 
+                    alt={job.umkm} 
+                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-100"
+                  />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-slate-700 transition truncate pr-4">{job.judul}</h3>
+                      <button className="text-slate-300 hover:text-slate-900 transition hidden md:block">
+                        <Bookmark className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-500 mb-3">
+                      <span className={`font-semibold px-2 py-0.5 rounded text-xs ${job.tipeKerja === 'Proyek Lepas' ? 'bg-slate-100 text-slate-700' : 'bg-slate-800 text-slate-100'}`}>
+                        {job.tipeKerja}
+                      </span>
+                      <span className="font-medium text-slate-700 flex items-center"><Briefcase className="w-3.5 h-3.5 mr-1 text-slate-400"/> {job.umkm}</span>
+                      <span className="hidden md:inline text-slate-300">•</span>
+                      <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1 text-slate-400"/> {job.lokasi}</span>
+                    </div>
+
+                    <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed mb-4">
+                      {job.deskripsi}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {job.tags.map((tag, idx) => (
+                        <span key={idx} className="bg-slate-50 text-slate-600 text-xs font-medium px-2 py-1 rounded border border-slate-200">
+                          {tag}
                         </span>
-                        <span className="font-medium text-gray-700 flex items-center"><Briefcase className="w-4 h-4 mr-1 text-gray-400"/> {job.umkm}</span>
-                        <span className="hidden md:inline text-gray-300">•</span>
-                        <span className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-gray-400"/> {job.lokasi}</span>
-                        <span className="hidden md:inline text-gray-300">•</span>
-                        <span className="flex items-center"><Clock className="w-4 h-4 mr-1 text-gray-400"/> {job.durasi}</span>
-                      </div>
-  
-                      <p className="text-gray-600 text-sm line-clamp-2 mb-4 leading-relaxed">
-                        {job.deskripsi}
-                      </p>
-  
-                      <div className="flex flex-wrap gap-2">
-                        {job.tags.map((tag, idx) => (
-                          <span key={idx} className="bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-1 rounded-md border border-gray-200">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                      ))}
                     </div>
-  
-                    {/* Sisi Kanan (Harga & Waktu) */}
-                    <div className="md:w-32 flex flex-col justify-between items-start md:items-end border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-5">
-                      <div className="text-left md:text-right">
-                        <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Upah</p>
-                        <p className="text-lg font-black text-green-600">{job.harga}</p>
-                      </div>
-                      <p className="text-xs text-gray-400 font-medium mt-4 md:mt-0">{job.waktuPost}</p>
+                  </div>
+
+                  {/* Sisi Kanan (Harga & Waktu) */}
+                  <div className="md:w-32 flex flex-col justify-between items-start md:items-end pt-4 md:pt-0">
+                    <div className="text-left md:text-right">
+                      <p className="text-[11px] text-slate-400 font-semibold mb-1 uppercase tracking-wider">Upah</p>
+                      <p className="text-base font-bold text-slate-900">{job.harga}</p>
                     </div>
+                    <p className="text-xs text-slate-400 font-medium mt-4 md:mt-0">{job.waktuPost}</p>
                   </div>
                 </div>
               ))
@@ -340,14 +345,14 @@ export default function CariLowongan() {
 
       {/* POP-UP DETAIL PEKERJAAN (Tampilan Profesional) */}
       {selectedJob && (
-        <div className="fixed inset-0 bg-gray-900/50 z-50 flex justify-center items-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex justify-center items-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-slate-200">
             
-            {/* Header Pop-up (Bukan gambar cover lagi, tapi solid clean header) */}
-            <div className="bg-white border-b border-gray-200 p-6 md:p-8 flex items-start justify-between relative">
+            {/* Header Pop-up */}
+            <div className="bg-white border-b border-slate-100 p-6 md:p-8 flex items-start justify-between relative">
               <button 
                 onClick={() => setSelectedJob(null)} 
-                className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition"
+                className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 p-2 rounded-lg transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -356,11 +361,11 @@ export default function CariLowongan() {
                   <img 
                     src={selectedJob.logoPerusahaan} 
                     alt={selectedJob.umkm} 
-                    className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-gray-200 shadow-sm"
+                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-slate-200 shadow-sm"
                   />
                   <div>
-                    <h2 className="text-2xl font-extrabold text-gray-900 leading-tight mb-2">{selectedJob.judul}</h2>
-                    <p className="text-blue-600 font-bold">{selectedJob.umkm}</p>
+                    <h2 className="text-xl font-bold text-slate-900 leading-tight mb-1">{selectedJob.judul}</h2>
+                    <p className="text-slate-500 font-semibold text-sm">{selectedJob.umkm}</p>
                   </div>
               </div>
             </div>
@@ -376,7 +381,7 @@ export default function CariLowongan() {
                   onClick={() => {
                     setIsApplyingSuccess(false);
                     setSelectedJob(null);
-                    navigate('/mahasiswa/proyek-aktif');
+                    navigate('/status-lamaran');
                   }}
                   className="bg-green-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-green-700 transition"
                 >
@@ -385,44 +390,44 @@ export default function CariLowongan() {
               </div>
             ) : (
               <>
-                <div className="p-6 md:p-8 overflow-y-auto bg-gray-50 flex-1">
+                <div className="p-6 md:p-8 overflow-y-auto bg-white flex-1">
                   {/* Detail Info Bar */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap gap-x-8 gap-y-4 mb-6 shadow-sm relative overflow-hidden">
-                    <div className={`absolute right-0 top-0 bottom-0 w-2 ${selectedJob.tipeKerja === 'Proyek Lepas' ? 'bg-orange-400' : 'bg-purple-500'}`}></div>
+                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex flex-wrap gap-x-8 gap-y-4 mb-6 relative overflow-hidden">
+                    <div className={`absolute right-0 top-0 bottom-0 w-1 ${selectedJob.tipeKerja === 'Proyek Lepas' ? 'bg-slate-400' : 'bg-slate-800'}`}></div>
                     <div>
-                      <p className="text-xs text-gray-400 uppercase font-bold mb-1">Tipe</p>
-                      <div className={`font-bold text-sm ${selectedJob.tipeKerja === 'Proyek Lepas' ? 'text-orange-600' : 'text-purple-600'}`}>
+                      <p className="text-[11px] text-slate-400 uppercase font-semibold mb-1">Tipe</p>
+                      <div className={`font-semibold text-sm ${selectedJob.tipeKerja === 'Proyek Lepas' ? 'text-slate-600' : 'text-slate-900'}`}>
                         {selectedJob.tipeKerja}
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 uppercase font-bold mb-1">Lokasi</p>
-                      <div className="flex items-center text-gray-700 font-medium text-sm">
-                        <MapPin className="w-4 h-4 mr-1.5 text-blue-500" /> {selectedJob.lokasi}
+                      <p className="text-[11px] text-slate-400 uppercase font-semibold mb-1">Lokasi</p>
+                      <div className="flex items-center text-slate-700 font-medium text-sm">
+                        <MapPin className="w-4 h-4 mr-1.5 text-slate-400" /> {selectedJob.lokasi}
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 uppercase font-bold mb-1">Durasi</p>
-                      <div className="flex items-center text-gray-700 font-medium text-sm">
-                        <Clock className="w-4 h-4 mr-1.5 text-blue-500" /> {selectedJob.durasi}
+                      <p className="text-[11px] text-slate-400 uppercase font-semibold mb-1">Durasi</p>
+                      <div className="flex items-center text-slate-700 font-medium text-sm">
+                        <Clock className="w-4 h-4 mr-1.5 text-slate-400" /> {selectedJob.durasi}
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 uppercase font-bold mb-1">Upah</p>
-                      <div className="flex items-center text-green-600 font-black text-sm">
+                      <p className="text-[11px] text-slate-400 uppercase font-semibold mb-1">Upah</p>
+                      <div className="flex items-center text-slate-900 font-bold text-sm">
                         {selectedJob.harga}
                       </div>
                     </div>
                   </div>
 
                   <div className="mb-8">
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center"><FileText className="w-5 h-5 mr-2 text-gray-400"/> Deskripsi Proyek</h3>
-                    <p className="text-gray-600 leading-relaxed bg-white p-5 rounded-xl border border-gray-100 shadow-sm">{selectedJob.deskripsi}</p>
+                    <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center"><FileText className="w-4 h-4 mr-2 text-slate-400"/> Deskripsi Proyek</h3>
+                    <p className="text-slate-600 text-sm leading-relaxed">{selectedJob.deskripsi}</p>
                   </div>
 
                   <div className="mb-8">
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center"><CheckCircle className="w-5 h-5 mr-2 text-gray-400"/> Persyaratan Mahasiswa</h3>
-                    <ul className="list-disc pl-5 space-y-2 text-gray-600 bg-white p-5 rounded-xl border border-gray-100 shadow-sm ml-1">
+                    <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-slate-400"/> Persyaratan</h3>
+                    <ul className="list-disc pl-5 space-y-2 text-slate-600 text-sm ml-1">
                       {selectedJob.persyaratan.map((syarat, idx) => (
                         <li key={idx} className="leading-relaxed pl-2">{syarat}</li>
                       ))}
@@ -430,7 +435,7 @@ export default function CariLowongan() {
                   </div>
 
                   <div className="mb-4">
-                    <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider text-gray-500">Keahlian yang Dibutuhkan</h3>
+                    <h3 className="text-[11px] font-semibold text-slate-400 mb-3 uppercase tracking-wider">Keahlian Dibutuhkan</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedJob.tags.map((tag, idx) => (
                         <span key={idx} className="bg-white text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
@@ -441,26 +446,133 @@ export default function CariLowongan() {
                   </div>
                 </div>
                 
-                {/* Action Bar Bottom */}
-                <div className="bg-white border-t border-gray-200 p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <div className="text-center sm:text-left">
-                    <p className="text-xs text-gray-400 font-bold uppercase mb-1">Diiklankan oleh</p>
-                    <p className="text-gray-900 font-bold">{selectedJob.umkm}</p>
-                  </div>
-                  
-                  {/* LOGIN TO APPLY LOGIC */}
-                  <button 
-                    onClick={() => {
-                      if (isLoggedInState) {
-                        setShowApplyModal(true);
-                      } else {
-                        setShowLoginModal(true);
-                      }
-                    }}
-                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center cursor-pointer"
-                  >
-                    <CheckCircle className="w-5 h-5 mr-2" /> Kirim Lamaran Sekarang
-                  </button>
+                {/* Inline Application Form */}
+                <div className="bg-slate-50 border-t border-slate-100 p-6 md:p-8">
+                  {isLoggedInState ? (
+                    !kycVerified ? (
+                      <div className="text-center py-6">
+                        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <ShieldCheck className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">Verifikasi Identitas Diperlukan</h3>
+                        <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
+                          Anda harus melengkapi verifikasi identitas (KTP) sebelum dapat melamar pekerjaan di platform ini.
+                        </p>
+                        <button 
+                          onClick={() => navigate('/kyc')}
+                          className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-6 py-2.5 rounded-lg shadow-sm transition inline-flex items-center cursor-pointer"
+                        >
+                          Lengkapi Verifikasi Sekarang
+                        </button>
+                      </div>
+                    ) : (
+                    <>
+                      <h3 className="text-base font-bold text-slate-900 mb-5 border-b border-slate-200 pb-3">
+                        {selectedJob.tipeKerja === 'Sayembara' ? 'Form Pengumpulan Karya' : 'Form Lamaran Kerja'}
+                      </h3>
+                      
+                      {selectedJob.tipeKerja === 'Sayembara' ? (
+                        <>
+                          <div className="mb-5 bg-amber-50 p-4 rounded-lg border border-amber-100 flex items-start gap-3">
+                            <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                            <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                              Harap berikan <span className="font-bold text-amber-700">Watermark</span> pada karya Anda sebelum mengunggah. File asli hanya dikirim jika Anda terpilih sebagai pemenang.
+                            </p>
+                          </div>
+                          <div className="mb-5">
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase mb-2 tracking-wider">Unggah Karya (JPG, PNG, PDF)</label>
+                            <input 
+                              type="file"
+                              accept="image/png, image/jpeg, application/pdf"
+                              onChange={(e) => setSubmissionFile(e.target.files[0])}
+                              className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-slate-900 transition text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mb-5 bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                            <p className="text-xs text-indigo-900 leading-relaxed font-medium">
+                              UMKM akan melihat profil Anda secara otomatis. Tulis pesan pengantar di bawah ini.
+                            </p>
+                          </div>
+                          <div className="mb-5">
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase mb-2 tracking-wider">Pesan Pengantar (Cover Letter)</label>
+                            <textarea 
+                              value={coverLetter}
+                              onChange={(e) => setCoverLetter(e.target.value)}
+                              placeholder="Ceritakan mengapa Anda cocok untuk pekerjaan ini..."
+                              className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-600 transition text-sm h-32 resize-none"
+                            ></textarea>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-200">
+                        <div className="text-left flex gap-4 items-center">
+                          <div>
+                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Diiklankan oleh</p>
+                            <p className="text-slate-900 font-semibold text-sm">{selectedJob.umkm}</p>
+                          </div>
+                          {selectedJob.umkmId && (
+                            <Link to={`/chat?userId=${selectedJob.umkmId}`} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl transition font-bold text-xs border border-indigo-200 hover:border-indigo-600 shadow-sm" title="Tanya seputar pekerjaan ini">
+                              <MessageSquare className="w-4 h-4" />
+                              Tanya UMKM
+                            </Link>
+                          )}
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const formData = new FormData();
+                              formData.append('jobId', selectedJob.id);
+                              formData.append('mahasiswaId', localStorage.getItem('userId'));
+
+                              if (selectedJob.tipeKerja === 'Sayembara') {
+                                if (!submissionFile) return alert('File karya wajib diunggah!');
+                                formData.append('file', submissionFile);
+                              } else {
+                                formData.append('coverLetter', coverLetter);
+                              }
+
+                              const response = await fetch('http://localhost:5000/api/applications', {
+                                method: 'POST',
+                                body: formData
+                              });
+                              const data = await response.json();
+                              if (response.ok) {
+                                setIsApplyingSuccess(true);
+                                setCoverLetter('');
+                                setSubmissionFile(null);
+                              } else {
+                                alert(data.error || 'Gagal mengirim lamaran');
+                              }
+                            } catch (err) {
+                              alert('Terjadi kesalahan');
+                            }
+                          }}
+                          className={`px-6 py-2.5 rounded-lg text-white font-semibold text-sm transition flex items-center justify-center cursor-pointer ${selectedJob.tipeKerja === 'Sayembara' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                        >
+                          <Send className="w-4 h-4 mr-2" /> {selectedJob.tipeKerja === 'Sayembara' ? 'Kumpulkan Karya' : 'Kirim Lamaran Sekarang'}
+                        </button>
+                      </div>
+                    </>
+                    )
+                  ) : (
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                      <div className="text-center sm:text-left">
+                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Diiklankan oleh</p>
+                        <p className="text-slate-900 font-semibold text-sm">{selectedJob.umkm}</p>
+                      </div>
+                      <button 
+                        onClick={() => setShowLoginModal(true)}
+                        className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-6 rounded-lg transition flex items-center justify-center cursor-pointer text-sm"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" /> Login untuk Melamar
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -573,71 +685,7 @@ export default function CariLowongan() {
         </div>
       )}
 
-      {/* --- MODAL LAMAR PEKERJAAN (COVER LETTER) --- */}
-      {showApplyModal && (
-        <div className="fixed inset-0 bg-slate-900/70 z-50 flex justify-center items-center p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-indigo-900 text-white shrink-0">
-              <div>
-                <h2 className="text-xl font-extrabold">Form Lamaran Kerja</h2>
-                <p className="text-indigo-200 text-xs mt-1">
-                  Melamar: <span className="font-bold text-white">{selectedJob?.judul}</span>
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowApplyModal(false)} 
-                className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-full flex justify-center items-center transition text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto">
-              <div className="mb-4 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-indigo-900 leading-relaxed font-medium">
-                  UMKM akan melihat profil dan keahlian Anda secara otomatis. Gunakan pesan pengantar di bawah ini untuk menonjolkan nilai plus Anda.
-                </p>
-              </div>
 
-              <div className="mb-6">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Pesan Pengantar (Cover Letter)</label>
-                <textarea 
-                  value={coverLetter}
-                  onChange={(e) => setCoverLetter(e.target.value)}
-                  placeholder="Ceritakan mengapa Anda cocok untuk pekerjaan ini, atau tawarkan negosiasi jika ada..."
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-medium h-40 resize-none"
-                ></textarea>
-              </div>
-
-              <button 
-                onClick={async () => {
-                  try {
-                    const response = await fetch('http://localhost:5000/api/applications', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ jobId: selectedJob.id, mahasiswaId: parseInt(localStorage.getItem('userId')) })
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                      setShowApplyModal(false);
-                      setIsApplyingSuccess(true);
-                      setCoverLetter('');
-                    } else {
-                      alert(data.error || 'Gagal mengirim lamaran');
-                    }
-                  } catch (err) {
-                    alert('Terjadi kesalahan');
-                  }
-                }}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer flex justify-center items-center gap-2 text-sm"
-              >
-                <Send className="w-4 h-4" /> Kirim Lamaran Sekarang
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       
       <Footer />
     </div>
