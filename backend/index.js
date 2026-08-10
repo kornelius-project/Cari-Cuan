@@ -568,6 +568,10 @@ app.post('/api/applications/:id/complete', authenticateToken, async (req, res) =
           ratingCount: newRatingCount,
           completedProjects: { increment: 1 }
         }
+      }),
+      prisma.job.update({
+        where: { id: application.job.id },
+        data: { status: 'closed' }
       })
     ];
 
