@@ -190,6 +190,7 @@ export default function Navbar() {
 
             {isLoggedIn && userRole === 'umkm' && (
               <>
+                <Link to="/lowongan" className={`transition ${isActive('/lowongan')}`}>Lihat Loker</Link>
                 <Link to="/dashboard-umkm" className={`transition ${isActive('/dashboard-umkm')}`}>Dasbor Bisnis</Link>
                 <Link to="/riwayat-transaksi" className={`transition ${isActive('/riwayat-transaksi')}`}>Riwayat Transaksi</Link>
               </>

@@ -11,6 +11,8 @@ export default function RiwayatTransaksi() {
 
   const [transactions, setTransactions] = useState([]);
   const [totalPengeluaran, setTotalPengeluaran] = useState(0);
+  const [tertahanEscrow, setTertahanEscrow] = useState(0);
+  const [danaDikembalikan, setDanaDikembalikan] = useState(0);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -31,10 +33,22 @@ export default function RiwayatTransaksi() {
             nominal: t.amount
           }));
           setTransactions(mappedTrx);
+          
           const totalOut = mappedTrx
             .filter(t => t.jenis === 'Keluar')
             .reduce((sum, t) => sum + t.nominal, 0);
-          setTotalPengeluaran(totalOut);
+            
+          const escrow = data.escrowAmount || 0;
+          setTertahanEscrow(escrow);
+          
+          // Total Pengeluaran = Total Keluar (termasuk escrow aktif) - Escrow Aktif
+          // Sehingga hanya menampilkan pengeluaran yang sudah 'final' (Pajak + Escrow yang sudah cair)
+          setTotalPengeluaran(totalOut - escrow);
+          
+          const refund = mappedTrx
+            .filter(t => t.jenis === 'Masuk' && t.keterangan.includes('Pengembalian Dana Escrow'))
+            .reduce((sum, t) => sum + t.nominal, 0);
+          setDanaDikembalikan(refund);
         }
       } catch (e) {
         console.error(e);
@@ -77,7 +91,7 @@ export default function RiwayatTransaksi() {
             </div>
             <div>
               <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Tertahan (Escrow)</p>
-              <p className="text-2xl font-black text-slate-900">Rp 0</p>
+              <p className="text-2xl font-black text-slate-900">Rp {tertahanEscrow.toLocaleString('id-ID')}</p>
             </div>
           </div>
 
@@ -87,7 +101,7 @@ export default function RiwayatTransaksi() {
             </div>
             <div>
               <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Dana Dikembalikan</p>
-              <p className="text-2xl font-black text-slate-900">Rp 0</p>
+              <p className="text-2xl font-black text-slate-900">Rp {danaDikembalikan.toLocaleString('id-ID')}</p>
             </div>
           </div>
         </div>

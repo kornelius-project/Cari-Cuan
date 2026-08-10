@@ -136,6 +136,8 @@ export default function CariLowongan() {
     return true;
   });
 
+  const userRole = localStorage.getItem('userRole');
+
   return (
     <div className="min-h-screen font-sans bg-slate-50 flex flex-col">
       <Navbar />
@@ -143,8 +145,14 @@ export default function CariLowongan() {
       {/* HEADER BURSA KERJA */}
       <header className="bg-white border-b border-slate-200 py-10">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Cari Lowongan Pekerjaan</h1>
-          <p className="text-slate-500 font-medium">Temukan proyek part-time dan sayembara dari UMKM lokal yang cocok untuk Anda.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+            {userRole === 'umkm' ? 'Eksplorasi Loker UMKM Lain' : 'Cari Lowongan Pekerjaan'}
+          </h1>
+          <p className="text-slate-500 font-medium">
+            {userRole === 'umkm' 
+              ? 'Jelajahi pekerjaan dan sayembara dari sesama UMKM untuk melihat tren saat ini.' 
+              : 'Temukan proyek part-time dan sayembara dari UMKM lokal yang cocok untuk Anda.'}
+          </p>
         </div>
       </header>
 
@@ -469,7 +477,23 @@ export default function CariLowongan() {
                 {/* Inline Application Form */}
                 <div className="bg-slate-50 border-t border-slate-100 p-6 md:p-8">
                   {isLoggedInState ? (
-                    !kycVerified ? (
+                    localStorage.getItem('userRole') === 'umkm' ? (
+                      <div className="text-center py-6">
+                        <div className="w-16 h-16 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Briefcase className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">Akun Bisnis (UMKM)</h3>
+                        <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
+                          Anda login sebagai UMKM. Akun UMKM tidak dapat melamar pekerjaan. Silakan buat proyek baru melalui dasbor Anda.
+                        </p>
+                        <button 
+                          onClick={() => navigate('/dashboard-umkm')}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-lg shadow-sm transition inline-flex items-center cursor-pointer"
+                        >
+                          Ke Dasbor Bisnis
+                        </button>
+                      </div>
+                    ) : !kycVerified ? (
                       <div className="text-center py-6">
                         <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
                           <ShieldCheck className="w-8 h-8" />

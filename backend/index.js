@@ -154,7 +154,20 @@ app.get('/api/wallet', authenticateToken, async (req, res) => {
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' }
     });
-    res.json({ balance: user.balance, transactions });
+
+    // Calculate active escrow
+    const activeJobs = await prisma.job.findMany({
+      where: { umkmId: req.user.id, status: 'open' }
+    });
+    
+    let escrowAmount = 0;
+    activeJobs.forEach(job => {
+      if (job.type === 'Sayembara' || job.type?.includes('Sayembara')) {
+        escrowAmount += parseInt(job.salary?.replace(/\D/g, '')) || 0;
+      }
+    });
+
+    res.json({ balance: user.balance, transactions, escrowAmount });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -263,6 +276,26 @@ app.delete('/api/jobs/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    // Refund Escrow if it was a Sayembara and status is still open
+    const isSayembara = job.type === 'Sayembara' || job.type?.includes('Sayembara');
+    if (isSayembara && job.status === 'open') {
+      const cost = parseInt(job.salary?.replace(/\D/g, '')) || 0;
+      if (cost > 0) {
+        await prisma.user.update({
+          where: { id: req.user.id },
+          data: { balance: { increment: cost } }
+        });
+        await prisma.transaction.create({
+          data: {
+            userId: req.user.id,
+            amount: cost,
+            type: 'Topup',
+            description: `Pengembalian Dana Escrow (Proyek Dihapus: ${job.title})`
+          }
+        });
+      }
+    }
+
     // Since we don't have onDelete: Cascade, we must delete associated applications first
     await prisma.application.deleteMany({
       where: { jobId }
@@ -272,7 +305,7 @@ app.delete('/api/jobs/:id', authenticateToken, async (req, res) => {
       where: { id: jobId }
     });
 
-    res.json({ message: 'Lowongan berhasil dihapus' });
+    res.json({ message: 'Lowongan berhasil dihapus dan dana Escrow (jika ada) telah dikembalikan' });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
