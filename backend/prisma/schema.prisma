@@ -16,6 +16,15 @@ model User {
   balance   Float    @default(0)
   kycStatus String   @default("UNVERIFIED") // 'UNVERIFIED', 'PENDING', 'VERIFIED'
   ktpImageUrl String?
+  
+  // New fields for Gamification & Profile
+  xp                Int      @default(0)
+  rating            Float    @default(0.0)
+  ratingCount       Int      @default(0)
+  completedProjects Int      @default(0)
+  avatarUrl         String?
+  fakultas          String?
+
   createdAt DateTime @default(now())
 
   // Relations

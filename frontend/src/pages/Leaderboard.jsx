@@ -1,25 +1,51 @@
-import React, { useState } from 'react';
-import { Trophy, Medal, Star, TrendingUp, ChevronDown, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, Medal, Star, TrendingUp, ChevronDown, Award, Loader2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
 export default function Leaderboard() {
   const [kategori, setKategori] = useState('Bulan Ini');
   const userName = localStorage.getItem('userName') || 'Pengguna Aktif';
+  
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/users/leaderboard');
+        if (response.ok) {
+          const data = await response.json();
+          // Transform backend data to frontend format
+          const formatted = data.map((user, index) => ({
+            peringkat: index + 1,
+            nama: user.name,
+            fakultas: user.fakultas || 'Fakultas Umum',
+            poin: user.xp,
+            proyek: user.completedProjects,
+            avatar: user.avatarUrl || `https://i.pravatar.cc/150?u=${user.id}`
+          }));
+          setLeaderboardData(formatted);
+        }
+      } catch (error) {
+        console.error('Failed to fetch leaderboard:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchLeaderboard();
+  }, []);
 
-  const top3 = [
-    { peringkat: 2, nama: "Siti Nurhaliza", fakultas: "Fakultas Ekonomika dan Bisnis", poin: 4200, proyek: 12, avatar: "https://i.pravatar.cc/150?img=5" },
-    { peringkat: 1, nama: "Budi Santoso", fakultas: "Fakultas Teknologi Informasi", poin: 5800, proyek: 15, avatar: "https://i.pravatar.cc/150?img=11" },
-    { peringkat: 3, nama: "Andi Wijaya", fakultas: "Fakultas Bahasa dan Seni", poin: 3950, proyek: 9, avatar: "https://i.pravatar.cc/150?img=8" }
+  // Safe fallback if not enough data
+  const top3 = leaderboardData.slice(0, 3);
+  // Reorder for UI (Juara 2, Juara 1, Juara 3)
+  const displayTop3 = [
+    top3[1] || { peringkat: 2, nama: "-", fakultas: "-", poin: 0, proyek: 0, avatar: "https://i.pravatar.cc/150?u=fallback" },
+    top3[0] || { peringkat: 1, nama: "-", fakultas: "-", poin: 0, proyek: 0, avatar: "https://i.pravatar.cc/150?u=fallback" },
+    top3[2] || { peringkat: 3, nama: "-", fakultas: "-", poin: 0, proyek: 0, avatar: "https://i.pravatar.cc/150?u=fallback" }
   ];
 
-  const others = [
-    { peringkat: 4, nama: "Rina Kumala", fakultas: "Fakultas Pertanian", poin: 3100, proyek: 8, avatar: "https://i.pravatar.cc/150?img=9" },
-    { peringkat: 5, nama: "Dewi Lestari", fakultas: "Fakultas Hukum", poin: 2850, proyek: 7, avatar: "https://i.pravatar.cc/150?img=21" },
-    { peringkat: 6, nama: userName, fakultas: "Fakultas Teknologi Informasi", poin: 2400, proyek: 5, avatar: "https://i.pravatar.cc/150?img=33" },
-    { peringkat: 7, nama: "Ahmad Fauzi", fakultas: "Fakultas Teknik", poin: 2150, proyek: 4, avatar: "https://i.pravatar.cc/150?img=12" },
-  ];
+  const others = leaderboardData.slice(3);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
@@ -64,63 +90,70 @@ export default function Leaderboard() {
         </div>
 
         {/* PODIUM TOP 3 */}
-        <div className="flex flex-col md:flex-row justify-center items-end gap-4 md:gap-6 mb-16 px-4">
-          
-          {/* Juara 2 */}
-          <div className="w-full md:w-1/3 flex flex-col items-center order-2 md:order-1">
-            <div className="relative mb-4">
-              <img src={top3[0].avatar} alt={top3[0].nama} className="w-24 h-24 rounded-full border-4 border-gray-300 shadow-lg object-cover" />
-              <div className="absolute -bottom-3 -right-3 w-10 h-10 bg-gray-300 rounded-full border-4 border-white flex items-center justify-center text-gray-800 font-black shadow-sm">
-                2
-              </div>
-            </div>
-            <div className="bg-white border-t-4 border-gray-300 rounded-t-2xl shadow-md w-full pt-6 pb-8 px-4 text-center transform md:translate-y-8">
-              <h3 className="font-bold text-gray-900 text-lg line-clamp-1">{top3[0].nama}</h3>
-              <p className="text-xs text-gray-500 mb-3 line-clamp-1">{top3[0].fakultas}</p>
-              <div className="bg-gray-50 rounded-xl py-2 px-3 inline-block">
-                <span className="text-gray-900 font-black flex items-center justify-center"><Star className="w-4 h-4 text-yellow-500 mr-1"/> {top3[0].poin} XP</span>
-              </div>
-            </div>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+            <span className="ml-3 font-bold text-gray-500">Memuat Papan Peringkat...</span>
           </div>
+        ) : (
+          <div className="flex flex-col md:flex-row justify-center items-end gap-4 md:gap-6 mb-16 px-4">
+            
+            {/* Juara 2 */}
+            <div className="w-full md:w-1/3 flex flex-col items-center order-2 md:order-1">
+              <div className="relative mb-4">
+                <img src={displayTop3[0].avatar} alt={displayTop3[0].nama} className="w-24 h-24 rounded-full border-4 border-gray-300 shadow-lg object-cover" />
+                <div className="absolute -bottom-3 -right-3 w-10 h-10 bg-gray-300 rounded-full border-4 border-white flex items-center justify-center text-gray-800 font-black shadow-sm">
+                  2
+                </div>
+              </div>
+              <div className="bg-white border-t-4 border-gray-300 rounded-t-2xl shadow-md w-full pt-6 pb-8 px-4 text-center transform md:translate-y-8">
+                <h3 className="font-bold text-gray-900 text-lg line-clamp-1">{displayTop3[0].nama}</h3>
+                <p className="text-xs text-gray-500 mb-3 line-clamp-1">{displayTop3[0].fakultas}</p>
+                <div className="bg-gray-50 rounded-xl py-2 px-3 inline-block">
+                  <span className="text-gray-900 font-black flex items-center justify-center"><Star className="w-4 h-4 text-yellow-500 mr-1"/> {displayTop3[0].poin} XP</span>
+                </div>
+              </div>
+            </div>
 
-          {/* Juara 1 */}
-          <div className="w-full md:w-1/3 flex flex-col items-center order-1 md:order-2 z-10">
-            <div className="relative mb-6">
-              <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-                <Award className="w-10 h-10 text-yellow-500 drop-shadow-md" />
+            {/* Juara 1 */}
+            <div className="w-full md:w-1/3 flex flex-col items-center order-1 md:order-2 z-10">
+              <div className="relative mb-6">
+                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
+                  <Award className="w-10 h-10 text-yellow-500 drop-shadow-md" />
+                </div>
+                <img src={displayTop3[1].avatar} alt={displayTop3[1].nama} className="w-32 h-32 rounded-full border-4 border-yellow-400 shadow-xl object-cover ring-4 ring-yellow-100" />
+                <div className="absolute -bottom-4 -right-2 w-12 h-12 bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center text-yellow-900 font-black text-xl shadow-md">
+                  1
+                </div>
               </div>
-              <img src={top3[1].avatar} alt={top3[1].nama} className="w-32 h-32 rounded-full border-4 border-yellow-400 shadow-xl object-cover ring-4 ring-yellow-100" />
-              <div className="absolute -bottom-4 -right-2 w-12 h-12 bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center text-yellow-900 font-black text-xl shadow-md">
-                1
+              <div className="bg-white border-t-4 border-yellow-400 rounded-t-2xl shadow-xl w-full pt-8 pb-12 px-4 text-center relative">
+                <h3 className="font-black text-gray-900 text-xl line-clamp-1">{displayTop3[1].nama}</h3>
+                <p className="text-xs text-gray-500 mb-3 line-clamp-1">{displayTop3[1].fakultas}</p>
+                <div className="bg-yellow-50 rounded-xl py-2 px-4 inline-block border border-yellow-100">
+                  <span className="text-yellow-700 font-black flex items-center justify-center text-lg"><Star className="w-5 h-5 text-yellow-500 mr-1"/> {displayTop3[1].poin} XP</span>
+                </div>
               </div>
             </div>
-            <div className="bg-white border-t-4 border-yellow-400 rounded-t-2xl shadow-xl w-full pt-8 pb-12 px-4 text-center relative">
-              <h3 className="font-black text-gray-900 text-xl line-clamp-1">{top3[1].nama}</h3>
-              <p className="text-xs text-gray-500 mb-3 line-clamp-1">{top3[1].fakultas}</p>
-              <div className="bg-yellow-50 rounded-xl py-2 px-4 inline-block border border-yellow-100">
-                <span className="text-yellow-700 font-black flex items-center justify-center text-lg"><Star className="w-5 h-5 text-yellow-500 mr-1"/> {top3[1].poin} XP</span>
+
+            {/* Juara 3 */}
+            <div className="w-full md:w-1/3 flex flex-col items-center order-3 md:order-3">
+              <div className="relative mb-4">
+                <img src={displayTop3[2].avatar} alt={displayTop3[2].nama} className="w-24 h-24 rounded-full border-4 border-orange-300 shadow-lg object-cover" />
+                <div className="absolute -bottom-3 -right-3 w-10 h-10 bg-orange-300 rounded-full border-4 border-white flex items-center justify-center text-orange-900 font-black shadow-sm">
+                  3
+                </div>
+              </div>
+              <div className="bg-white border-t-4 border-orange-300 rounded-t-2xl shadow-md w-full pt-6 pb-6 px-4 text-center transform md:translate-y-12">
+                <h3 className="font-bold text-gray-900 text-lg line-clamp-1">{displayTop3[2].nama}</h3>
+                <p className="text-xs text-gray-500 mb-3 line-clamp-1">{displayTop3[2].fakultas}</p>
+                <div className="bg-orange-50 rounded-xl py-2 px-3 inline-block">
+                  <span className="text-orange-800 font-black flex items-center justify-center"><Star className="w-4 h-4 text-orange-500 mr-1"/> {displayTop3[2].poin} XP</span>
+                </div>
               </div>
             </div>
+
           </div>
-
-          {/* Juara 3 */}
-          <div className="w-full md:w-1/3 flex flex-col items-center order-3 md:order-3">
-            <div className="relative mb-4">
-              <img src={top3[2].avatar} alt={top3[2].nama} className="w-24 h-24 rounded-full border-4 border-orange-300 shadow-lg object-cover" />
-              <div className="absolute -bottom-3 -right-3 w-10 h-10 bg-orange-300 rounded-full border-4 border-white flex items-center justify-center text-orange-900 font-black shadow-sm">
-                3
-              </div>
-            </div>
-            <div className="bg-white border-t-4 border-orange-300 rounded-t-2xl shadow-md w-full pt-6 pb-6 px-4 text-center transform md:translate-y-12">
-              <h3 className="font-bold text-gray-900 text-lg line-clamp-1">{top3[2].nama}</h3>
-              <p className="text-xs text-gray-500 mb-3 line-clamp-1">{top3[2].fakultas}</p>
-              <div className="bg-orange-50 rounded-xl py-2 px-3 inline-block">
-                <span className="text-orange-800 font-black flex items-center justify-center"><Star className="w-4 h-4 text-orange-500 mr-1"/> {top3[2].poin} XP</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
+        )}
 
         {/* LIST PERINGKAT 4-10 */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">

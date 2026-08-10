@@ -343,6 +343,68 @@ export default function DashboardUMKM() {
   const [editingProject, setEditingProject] = useState(null);
   const [editFormData, setEditFormData] = useState({ judul: '', tipeKerja: '', budget: '', deskripsi: '' });
 
+  // RATING MODAL STATE
+  const [ratingModal, setRatingModal] = useState({
+    isOpen: false,
+    appId: null,
+    mahasiswaId: null,
+    projectId: null,
+    amount: 0,
+    jobTitle: '',
+    jobType: '',
+    rating: 5
+  });
+
+  const openRatingModal = (appId, mahasiswaId, projectId, amount, jobTitle, jobType) => {
+    setRatingModal({
+      isOpen: true,
+      appId, mahasiswaId, projectId, amount, jobTitle, jobType, rating: 5
+    });
+  };
+
+  const handleCompleteAndRate = async () => {
+    try {
+      const { appId, projectId, amount, rating, jobType } = ratingModal;
+      const token = localStorage.getItem('token');
+      
+      // 1. Call Complete/Rate endpoint
+      const response = await fetch(`http://localhost:5000/api/applications/${appId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ rating, amount })
+      });
+      
+      if (response.ok) {
+        fetchWallet();
+        setProyekAktif(prev => prev.map(p => {
+          if (p.id === projectId) {
+            return {
+              ...p,
+              status: 'Selesai',
+              isApproved: true,
+              applications: p.applications.map(a => 
+                a.id === appId ? { ...a, status: 'APPROVED' } : { ...a, status: 'REJECTED' }
+              )
+            };
+          }
+          return p;
+        }));
+        showToast(`Berhasil! Rating terkirim dan Rp ${amount.toLocaleString('id-ID')} dicairkan.`);
+        setRatingModal(prev => ({ ...prev, isOpen: false }));
+        setSelectedReviewId(null);
+        setSelectedApplicantsId(null);
+      } else {
+        showToast("Gagal menyelesaikan pekerjaan", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Terjadi kesalahan server", "error");
+    }
+  };
+
   // --- DYNAMIC APPLICANTS DATA ---
   let currentApplicants = [];
   if (selectedApplicantsId) {
@@ -950,10 +1012,8 @@ export default function DashboardUMKM() {
                         {!p?.isApproved ? (
                           <button 
                             onClick={() => {
-                              if (window.confirm(`Setujui karya dari ${app.mahasiswa?.name} dan cairkan dana?`)) {
-                                handleApproveApplication(app.id, app.mahasiswa.id, p.id, p.budget, p.judul, p.tipeKerja);
-                              }
-                            }}
+                                openRatingModal(app.id, app.mahasiswa.id, p.id, p.budget, p.judul, p.tipeKerja);
+                              }}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl transition flex justify-center items-center text-sm shadow-md cursor-pointer"
                           >
                             <Check className="w-4 h-4 mr-2" /> Setujui Karya Ini
@@ -982,6 +1042,49 @@ export default function DashboardUMKM() {
           </div>
         );
       })()}
+
+      {/* --- MODAL RATING & SELESAI --- */}
+      {ratingModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/70 z-50 flex justify-center items-center p-4 backdrop-blur-sm animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900">Beri Penilaian</h2>
+                <p className="text-xs text-slate-500 mt-1">Selesaikan pekerjaan dan cairkan dana.</p>
+              </div>
+              <button onClick={() => setRatingModal(prev => ({ ...prev, isOpen: false }))} className="w-8 h-8 bg-white border border-slate-200 hover:bg-slate-100 rounded-full flex justify-center items-center cursor-pointer">
+                <X className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+            <div className="p-6 text-center space-y-4">
+              <p className="text-sm font-medium text-slate-600">
+                Seberapa puas Anda dengan hasil kerja di proyek <span className="font-bold text-slate-900">{ratingModal.jobTitle}</span>?
+              </p>
+              
+              <div className="flex justify-center gap-2 my-4">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRatingModal(prev => ({ ...prev, rating: star }))}
+                    className="transition transform hover:scale-110 focus:outline-none"
+                  >
+                    <Star className={`w-10 h-10 ${ratingModal.rating >= star ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400">Pemberian rating akan menambah XP pada profil Mahasiswa.</p>
+
+              <button
+                onClick={handleCompleteAndRate}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-xl transition shadow-md mt-4 cursor-pointer"
+              >
+                Konfirmasi & Cairkan Dana
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- MODAL POSTING PROYEK BARU (PREMIUM SPLIT LAYOUT) --- */}
       {showPostingForm && (

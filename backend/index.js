@@ -528,6 +528,81 @@ app.put('/api/applications/:id', async (req, res) => {
   }
 });
 
+// Complete application (Selesaikan pekerjaan & Beri Rating)
+app.post('/api/applications/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const applicationId = parseInt(req.params.id);
+    const { rating } = req.body; // rating from 1 to 5
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      include: { job: true }
+    });
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    if (application.job.umkmId !== req.user.id) {
+      return res.status(403).json({ error: 'Only the job owner can complete this application' });
+    }
+
+    const mahasiswa = await prisma.user.findUnique({ where: { id: application.mahasiswaId } });
+    
+    // Hitung rating baru
+    const newRatingCount = mahasiswa.ratingCount + 1;
+    const currentTotalRating = mahasiswa.rating * mahasiswa.ratingCount;
+    const newRating = (currentTotalRating + parseFloat(rating)) / newRatingCount;
+    const xpEarned = 100 + (rating * 10); // 100 base XP + bonus rating (max 50)
+
+    const transactions = [
+      prisma.application.update({
+        where: { id: applicationId },
+        data: { status: 'SELESAI' }
+      }),
+      prisma.user.update({
+        where: { id: application.mahasiswaId },
+        data: { 
+          xp: { increment: xpEarned },
+          rating: newRating,
+          ratingCount: newRatingCount,
+          completedProjects: { increment: 1 }
+        }
+      })
+    ];
+
+    // Jika bukan tipe sayembara, cairkan dana dari Escrow (salary) sekarang
+    if (application.job.type !== 'Sayembara') {
+       const amount = parseFloat(application.job.salary?.replace(/\D/g,'')) || 0;
+       transactions.push(
+         prisma.user.update({
+           where: { id: application.mahasiswaId },
+           data: { balance: { increment: amount } }
+         }),
+         prisma.transaction.create({
+            userId: application.job.umkmId,
+            amount: 0,
+            type: 'Info',
+            description: `Dana Escrow diteruskan ke Mahasiswa: ${application.job.title}`
+         }),
+         prisma.transaction.create({
+            userId: application.mahasiswaId,
+            amount: amount,
+            type: 'Masuk',
+            description: `Honor Pekerjaan Selesai: ${application.job.title}`
+         })
+       );
+    }
+
+    await prisma.$transaction(transactions);
+
+    res.json({ success: true, message: 'Job completed, XP and rating added.' });
+  } catch (error) {
+    console.error('Error completing job:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // --- SOCKET.IO CHAT ---
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -619,6 +694,21 @@ app.get('/api/messages/contacts/:userId', async (req, res) => {
     }
     res.json(Array.from(contactsMap.values()));
   } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// --- LEADERBOARD ---
+app.get('/api/users/leaderboard', async (req, res) => {
+  try {
+    const topUsers = await prisma.user.findMany({
+      where: { role: 'mahasiswa' },
+      orderBy: { xp: 'desc' },
+      take: 10,
+      select: { id: true, name: true, xp: true, rating: true, completedProjects: true, avatarUrl: true, fakultas: true }
+    });
+    res.json(topUsers);
+  } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
