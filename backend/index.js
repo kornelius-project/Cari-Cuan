@@ -571,28 +571,30 @@ app.post('/api/applications/:id/complete', authenticateToken, async (req, res) =
       })
     ];
 
-    // Jika bukan tipe sayembara, cairkan dana dari Escrow (salary) sekarang
-    if (application.job.type !== 'Sayembara') {
-       const amount = parseFloat(application.job.salary?.replace(/\D/g,'')) || 0;
-       transactions.push(
-         prisma.user.update({
-           where: { id: application.mahasiswaId },
-           data: { balance: { increment: amount } }
-         }),
-         prisma.transaction.create({
-            userId: application.job.umkmId,
-            amount: 0,
-            type: 'Info',
-            description: `Dana Escrow diteruskan ke Mahasiswa: ${application.job.title}`
-         }),
-         prisma.transaction.create({
-            userId: application.mahasiswaId,
-            amount: amount,
-            type: 'Masuk',
-            description: `Honor Pekerjaan Selesai: ${application.job.title}`
-         })
-       );
-    }
+    // Cairkan dana dari Escrow (salary) ke mahasiswa
+    const amount = parseFloat(application.job.salary?.replace(/\D/g,'')) || 0;
+    transactions.push(
+      prisma.user.update({
+        where: { id: application.mahasiswaId },
+        data: { balance: { increment: amount } }
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: application.job.umkmId,
+          amount: 0,
+          type: 'Info',
+          description: `Dana Escrow diteruskan ke Mahasiswa: ${application.job.title}`
+        }
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: application.mahasiswaId,
+          amount: amount,
+          type: 'Masuk',
+          description: `Honor Pekerjaan Selesai: ${application.job.title}`
+        }
+      })
+    );
 
     await prisma.$transaction(transactions);
 
