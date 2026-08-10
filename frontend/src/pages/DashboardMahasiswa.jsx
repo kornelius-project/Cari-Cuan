@@ -20,6 +20,7 @@ export default function DashboardMahasiswa() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [filterTrx, setFilterTrx] = useState('semua');
   const [riwayatData, setRiwayatData] = useState([]);
+  const [toastMessage, setToastMessage] = useState('');
 
   const fetchWallet = async () => {
     try {
@@ -54,17 +55,22 @@ export default function DashboardMahasiswa() {
 
   const handleWithdrawClick = () => {
     if (!kycVerified) {
-      alert("Silakan lengkapi verifikasi KYC terlebih dahulu sebelum menarik dana.");
+      showToast("Silakan lengkapi verifikasi KYC terlebih dahulu sebelum menarik dana.");
       return;
     }
     if (saldo <= 0) {
-      alert("Saldo Anda Rp 0. Tidak ada dana yang bisa ditarik saat ini.");
+      showToast("Saldo Anda Rp 0. Tidak ada dana yang bisa ditarik saat ini.");
       return;
     }
     setWithdrawStep(1);
     setWithdrawAmount('');
     setPin(['', '', '', '', '', '']);
     setShowModal(true);
+  };
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
   };
 
   const handleNextStep = () => {
@@ -132,6 +138,14 @@ export default function DashboardMahasiswa() {
       <Navbar />
 
       <main className="flex-1 w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 py-10">
+        {toastMessage && (
+          <div className="fixed top-20 right-5 z-50 animate-in fade-in slide-in-from-top-5 duration-300">
+            <div className="bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg font-bold flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              {toastMessage}
+            </div>
+          </div>
+        )}
         
         {/* HERO HEADER CARD FOR MAHASISWA (CLEAN HUMAN SAAS) */}
         <header className="mb-8 bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">

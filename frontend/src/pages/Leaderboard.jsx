@@ -5,6 +5,8 @@ import Footer from '../components/Footer';
 
 export default function Leaderboard() {
   const [kategori, setKategori] = useState('Bulan Ini');
+  const userName = localStorage.getItem('userName') || 'Pengguna Aktif';
+
 
   const top3 = [
     { peringkat: 2, nama: "Siti Nurhaliza", fakultas: "Fakultas Ekonomika dan Bisnis", poin: 4200, proyek: 12, avatar: "https://i.pravatar.cc/150?img=5" },
@@ -15,7 +17,7 @@ export default function Leaderboard() {
   const others = [
     { peringkat: 4, nama: "Rina Kumala", fakultas: "Fakultas Pertanian", poin: 3100, proyek: 8, avatar: "https://i.pravatar.cc/150?img=9" },
     { peringkat: 5, nama: "Dewi Lestari", fakultas: "Fakultas Hukum", poin: 2850, proyek: 7, avatar: "https://i.pravatar.cc/150?img=21" },
-    { peringkat: 6, nama: "Kornelius C.", fakultas: "Fakultas Teknologi Informasi", poin: 2400, proyek: 5, avatar: "https://i.pravatar.cc/150?img=33" },
+    { peringkat: 6, nama: userName, fakultas: "Fakultas Teknologi Informasi", poin: 2400, proyek: 5, avatar: "https://i.pravatar.cc/150?img=33" },
     { peringkat: 7, nama: "Ahmad Fauzi", fakultas: "Fakultas Teknik", poin: 2150, proyek: 4, avatar: "https://i.pravatar.cc/150?img=12" },
   ];
 
@@ -133,7 +135,7 @@ export default function Leaderboard() {
           
           <div className="divide-y divide-gray-100">
             {others.map((user) => (
-              <div key={user.peringkat} className={`p-4 sm:p-6 flex items-center gap-4 hover:bg-gray-50 transition ${user.nama.includes('Kornelius') ? 'bg-blue-50/50' : ''}`}>
+              <div key={user.peringkat} className={`p-4 sm:p-6 flex items-center gap-4 hover:bg-gray-50 transition ${user.nama === userName ? 'bg-blue-50/50' : ''}`}>
                 <div className="w-8 font-black text-gray-400 text-lg text-center flex-shrink-0">
                   {user.peringkat}
                 </div>
@@ -142,7 +144,7 @@ export default function Leaderboard() {
                 
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-gray-900 truncate">
-                    {user.nama} {user.nama.includes('Kornelius') && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Anda</span>}
+                    {user.nama} {user.nama === userName && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Anda</span>}
                   </h4>
                   <p className="text-sm text-gray-500 truncate">{user.fakultas}</p>
                 </div>

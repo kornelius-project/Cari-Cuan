@@ -76,7 +76,7 @@ function KycVerification() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Verifikasi Identitas</h1>
             <p className="text-gray-500 text-sm">
-              Unggah foto KTP Anda untuk memverifikasi akun dan mendapatkan akses penuh ke platform Cari-Cuan.
+              Unggah foto KTP (UMKM) atau KTM (Mahasiswa) Anda untuk memverifikasi akun dan mendapatkan akses penuh ke platform Cari-Cuan.
             </p>
           </div>
 
@@ -106,7 +106,7 @@ function KycVerification() {
                     </div>
                   )}
                   <span className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                    {preview ? 'Ganti Foto' : 'Pilih Foto KTP'}
+                    {preview ? 'Ganti Foto' : 'Pilih Foto KTP / KTM'}
                   </span>
                   <span className="text-xs text-gray-400 mt-1">Format: JPG, PNG (Max 5MB)</span>
                 </label>
@@ -118,6 +118,42 @@ function KycVerification() {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
               >
                 {isSubmitting ? 'Mengunggah...' : 'Verifikasi Sekarang'}
+              </button>
+              
+              {/* DEV MOCK BUTTON */}
+              <button
+                type="button"
+                onClick={async () => {
+                   const token = localStorage.getItem('token');
+                   // Create dummy file
+                   const canvas = document.createElement('canvas');
+                   const dummyFile = await new Promise(res => canvas.toBlob(b => res(new File([b], "mock.jpg")), 'image/jpeg'));
+                   setFile(dummyFile);
+                   setIsSubmitting(true);
+                   try {
+                     const formData = new FormData();
+                     formData.append('ktp', dummyFile);
+                     const response = await fetch('http://localhost:5000/api/users/kyc', {
+                       method: 'POST',
+                       headers: { 'Authorization': `Bearer ${token}` },
+                       body: formData
+                     });
+                     if (response.ok) {
+                       let user = JSON.parse(localStorage.getItem('user'));
+                       if (user) {
+                         user.kycStatus = 'VERIFIED';
+                         localStorage.setItem('user', JSON.stringify(user));
+                       }
+                       setSuccess(true);
+                       setTimeout(() => navigate(user?.role === 'mahasiswa' ? '/dashboard-mahasiswa' : '/dashboard-umkm'), 1000);
+                     }
+                   } catch (e) {
+                     console.error(e);
+                   }
+                }}
+                className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold py-2 px-4 rounded-xl transition-all"
+              >
+                (Dev) Bypass Verifikasi KYC
               </button>
             </form>
           )}
