@@ -22,19 +22,23 @@ export default function StatusLamaran() {
             let statusText = 'Menunggu';
             if (app.status === 'APPROVED') statusText = 'Diterima';
             if (app.status === 'REJECTED') statusText = 'Ditolak';
+            if (app.status === 'SELESAI') statusText = 'Selesai';
             
             let pesan = 'Lamaran Anda sudah terkirim dan sedang menunggu keputusan dari pihak UMKM.';
             let link = null;
 
-              if (app.status === 'APPROVED') {
-                if (app.job?.type === 'Sayembara') {
-                  pesan = 'Selamat! Karya Sayembara Anda telah dipilih oleh UMKM. Dana kompensasi telah berhasil ditransfer ke saldo dompet Anda.';
-                  link = null; // Tidak perlu ke proyek aktif karena sudah selesai
-                } else {
-                  pesan = 'Selamat! UMKM menyetujui lamaran part-time Anda. Silakan koordinasikan pekerjaan melalui Chat.';
-                  link = app.job?.umkm?.id ? `/chat?userId=${app.job.umkm.id}` : '/chat';
-                }
+            if (app.status === 'APPROVED') {
+              if (app.job?.type === 'Sayembara') {
+                pesan = 'Karya Sayembara Anda sedang direview UMKM.';
+                link = null; 
+              } else {
+                pesan = 'Selamat! UMKM menyetujui lamaran part-time Anda. Silakan koordinasikan pekerjaan melalui Chat.';
+                link = app.job?.umkm?.id ? `/chat?userId=${app.job.umkm.id}` : '/chat';
               }
+            }
+            if (app.status === 'SELESAI') {
+              pesan = 'Pekerjaan Selesai! UMKM telah memberikan rating dan mencairkan pembayaran ke Dompet Anda.';
+            }
             if (app.status === 'REJECTED') {
               pesan = 'Mohon maaf, UMKM telah memilih kandidat lain yang lebih sesuai dengan kebutuhan mereka. Tetap semangat!';
             }
@@ -77,8 +81,8 @@ export default function StatusLamaran() {
 
         {/* TAB FILTER & PENCARIAN */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-          <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
-            {['Semua', 'Menunggu', 'Diterima', 'Ditolak'].map(tab => (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mb-6">
+            {['Semua', 'Menunggu', 'Diterima', 'Selesai', 'Ditolak'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
@@ -113,13 +117,15 @@ export default function StatusLamaran() {
               
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center ${
-                    job.status === 'Diterima' ? 'bg-green-100 text-green-700' :
-                    job.status === 'Menunggu' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {job.status === 'Diterima' && <CheckCircle className="w-3.5 h-3.5 mr-1" />}
-                    {job.status === 'Menunggu' && <Clock className="w-3.5 h-3.5 mr-1" />}
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center ${
+                      job.status === 'Diterima' ? 'bg-green-100 text-green-700' :
+                      job.status === 'Selesai' ? 'bg-blue-100 text-blue-700' :
+                      job.status === 'Menunggu' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {job.status === 'Diterima' && <CheckCircle className="w-3.5 h-3.5 mr-1" />}
+                      {job.status === 'Selesai' && <CheckCircle className="w-3.5 h-3.5 mr-1" />}
+                      {job.status === 'Menunggu' && <Clock className="w-3.5 h-3.5 mr-1" />}
                     {job.status === 'Ditolak' && <XCircle className="w-3.5 h-3.5 mr-1" />}
                     {job.status}
                   </span>
@@ -135,11 +141,12 @@ export default function StatusLamaran() {
                 </div>
                 
                 {/* Kotak Pesan Sistem */}
-                <div className={`p-4 rounded-xl border text-sm font-medium leading-relaxed ${
-                  job.status === 'Diterima' ? 'bg-green-50 border-green-100 text-green-800' :
-                  job.status === 'Menunggu' ? 'bg-gray-50 border-gray-100 text-gray-600' :
-                  'bg-red-50 border-red-100 text-red-800'
-                }`}>
+                  <div className={`p-4 rounded-xl border text-sm font-medium leading-relaxed ${
+                    job.status === 'Diterima' ? 'bg-green-50 border-green-100 text-green-800' :
+                    job.status === 'Selesai' ? 'bg-blue-50 border-blue-100 text-blue-800' :
+                    job.status === 'Menunggu' ? 'bg-gray-50 border-gray-100 text-gray-600' :
+                    'bg-red-50 border-red-100 text-red-800'
+                  }`}>
                   {job.pesan}
                 </div>
               </div>
@@ -149,6 +156,10 @@ export default function StatusLamaran() {
                 {job.status === 'Diterima' && job.link ? (
                   <Link to={job.link} className="w-full md:w-auto block bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-blue-700 hover:-translate-y-1 transition text-center flex items-center justify-center">
                     Hubungi UMKM (Chat) <ChevronRight className="w-4 h-4 ml-1" />
+                  </Link>
+                ) : job.status === 'Selesai' ? (
+                  <Link to="/leaderboard" className="w-full md:w-auto block bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-indigo-700 hover:-translate-y-1 transition text-center flex items-center justify-center">
+                    Cek Peringkat Leaderboard <Trophy className="w-4 h-4 ml-1" />
                   </Link>
                 ) : job.status === 'Ditolak' ? (
                   <Link to="/lowongan" className="w-full md:w-auto block bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition text-center">
