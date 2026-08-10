@@ -249,6 +249,35 @@ app.get('/api/jobs', async (req, res) => {
   }
 });
 
+// Delete a job (Untuk UMKM)
+app.delete('/api/jobs/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const jobId = parseInt(id);
+
+    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    
+    // Authorization check
+    if (job.umkmId !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Since we don't have onDelete: Cascade, we must delete associated applications first
+    await prisma.application.deleteMany({
+      where: { jobId }
+    });
+
+    await prisma.job.delete({
+      where: { id: jobId }
+    });
+
+    res.json({ message: 'Lowongan berhasil dihapus' });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Create a job (Untuk UMKM)
 app.post('/api/jobs', async (req, res) => {
   try {

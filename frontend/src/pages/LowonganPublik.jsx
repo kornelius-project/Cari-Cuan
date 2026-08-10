@@ -71,38 +71,51 @@ export default function LowonganPublik() {
           <p className="text-gray-500 max-w-xl mx-auto text-lg">Jelajahi kesempatan freelance nyata dari UMKM lokal. Anda harus memiliki akun terverifikasi untuk melamar!</p>
         </div>
 
-        <div className="flex flex-col space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {lowonganPublik.map((job) => (
-            <div key={job.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col md:flex-row gap-6 group">
+            <div key={job.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full hover:-translate-y-1">
               
-              {/* Gambar UMKM */}
-              <div className="w-full md:w-48 h-40 md:h-auto flex-shrink-0 relative overflow-hidden rounded-xl">
-                <img src={job.image} alt={job.umkm} className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-500" />
+              {/* Gambar UMKM (Cover Image) */}
+              <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden border-b border-gray-100">
+                <img src={job.image} alt={job.umkm} className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500" />
+                
+                {/* Kategori Badge Overlay */}
+                <div className="absolute top-3 left-3 flex gap-2">
+                  <span className="font-extrabold px-3 py-1.5 rounded-lg text-xs shadow-md backdrop-blur-md border bg-white/95 text-gray-800 border-white">
+                    {job.kategori}
+                  </span>
+                </div>
               </div>
 
               {/* Detail Pekerjaan */}
-              <div className="flex-1 py-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full">{job.kategori}</span>
-                  <span className="text-gray-500 text-sm font-medium flex items-center"><MapPin className="w-3 h-3 mr-1"/> {job.umkm}</span>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{job.judul}</h3>
-                <p className="text-gray-600 text-sm line-clamp-2 mb-4 leading-relaxed">{job.deskripsi}</p>
-                <div className="flex items-center text-gray-500 text-sm font-medium">
-                  <Clock className="w-4 h-4 mr-1 text-gray-400" /> Tenggat Waktu: <span className="ml-1 text-gray-700">{job.waktu}</span>
-                </div>
-              </div>
-
-              {/* Harga & Tombol */}
-              <div className="w-full md:w-48 flex flex-col justify-between items-start md:items-end border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                <div className="w-full flex md:flex-col justify-between md:justify-start items-center md:items-end mb-4 md:mb-0">
-                  <p className="text-sm text-gray-500 font-medium">Budget Proyek</p>
-                  <p className="text-2xl font-black text-green-600">{job.harga}</p>
+              <div className="p-5 flex flex-col flex-1">
+                <h3 className="text-lg font-extrabold text-gray-900 line-clamp-1 mb-2 group-hover:text-blue-600 transition">{job.judul}</h3>
+                
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-black text-[10px] uppercase border border-blue-100 shrink-0">
+                    {job.umkm.charAt(0)}
+                  </div>
+                  <p className="text-sm font-bold text-gray-700 truncate">{job.umkm}</p>
                 </div>
                 
-                <Link to="/register" className="w-full bg-gray-100 text-gray-600 font-bold py-3 px-4 rounded-xl hover:bg-blue-600 hover:text-white transition flex justify-center items-center group">
-                  <Lock className="w-4 h-4 mr-2" /> Login & Lamar
-                </Link>
+                <p className="text-gray-500 text-sm line-clamp-2 leading-relaxed flex-1 mb-4">{job.deskripsi}</p>
+                
+                <div className="flex items-center justify-between text-gray-500 text-xs font-medium mb-4">
+                  <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1 text-gray-400" /> {job.waktu}</span>
+                  <span className="text-gray-400">•</span>
+                  <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1 text-gray-400" /> Remote</span>
+                </div>
+
+                <div className="border-t border-gray-100 pt-4 mt-auto">
+                  <div className="flex justify-between items-end mb-4">
+                    <p className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Budget Proyek</p>
+                    <p className="text-base font-black text-green-600">{job.harga}</p>
+                  </div>
+                  
+                  <Link to="/register" className="w-full bg-gray-50 text-gray-700 font-bold py-2.5 px-4 rounded-xl hover:bg-blue-600 hover:text-white transition flex justify-center items-center group/btn shadow-sm border border-gray-100 hover:border-blue-600">
+                    <Lock className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" /> Login & Lamar
+                  </Link>
+                </div>
               </div>
               
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Clock, XCircle, CheckCircle, ChevronRight, MapPin, Search } from 'lucide-react';
+import { Briefcase, Clock, XCircle, CheckCircle, ChevronRight, MapPin, Search, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';

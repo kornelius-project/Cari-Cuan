@@ -277,63 +277,79 @@ export default function CariLowongan() {
           </div>
 
           {/* List Kartu Pekerjaan Profesional */}
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredJobs.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-                <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Pekerjaan tidak ditemukan</h3>
-                <p className="text-gray-500">Coba sesuaikan kata kunci atau hapus beberapa filter untuk melihat lebih banyak lowongan.</p>
+              <div className="col-span-full py-16 text-center bg-white border border-slate-200 rounded-xl">
+                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-slate-300" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Lowongan tidak ditemukan</h3>
+                <p className="text-slate-500 text-sm">Coba sesuaikan filter atau kata kunci pencarian Anda.</p>
               </div>
             ) : (
               filteredJobs.map((job) => (
                 <div 
                   key={job.id} 
                   onClick={() => setSelectedJob(job)}
-                  className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-colors cursor-pointer group shadow-sm flex flex-col md:flex-row gap-5"
+                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col h-full hover:-translate-y-1"
                 >
-                  <img 
-                    src={job.logoPerusahaan} 
-                    alt={job.umkm} 
-                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-100"
-                  />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-slate-700 transition truncate pr-4">{job.judul}</h3>
-                      <button className="text-slate-300 hover:text-slate-900 transition hidden md:block">
+                  {/* Bagian Gambar (Hero/Cover) */}
+                  <div className="w-full aspect-[4/3] bg-slate-100 relative overflow-hidden border-b border-slate-100">
+                    <img 
+                      src={job.logoPerusahaan} 
+                      alt={job.umkm} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    
+                    {/* Badge Tipe Kerja Overlay */}
+                    <div className="absolute top-3 left-3 flex gap-2">
+                      <span className={`font-extrabold px-3 py-1.5 rounded-lg text-xs shadow-md backdrop-blur-md border ${
+                        job.tipeKerja === 'Sayembara' 
+                          ? 'bg-slate-900/90 text-white border-slate-700/50' 
+                          : 'bg-white/95 text-slate-800 border-white'
+                      }`}>
+                        {job.tipeKerja}
+                      </span>
+                    </div>
+
+                    {/* Bookmark Overlay */}
+                    <div className="absolute top-3 right-3">
+                      <button className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-white shadow-sm transition">
                         <Bookmark className="w-4 h-4" />
                       </button>
                     </div>
+                  </div>
+                  
+                  {/* Bagian Konten Bawah */}
+                  <div className="p-5 flex flex-col flex-1">
+                    <h3 className="text-lg font-extrabold text-slate-900 line-clamp-1 mb-2 group-hover:text-indigo-600 transition">
+                      {job.judul}
+                    </h3>
                     
-                    <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-500 mb-3">
-                      <span className={`font-semibold px-2 py-0.5 rounded text-xs ${job.tipeKerja === 'Proyek Lepas' ? 'bg-slate-100 text-slate-700' : 'bg-slate-800 text-slate-100'}`}>
-                        {job.tipeKerja}
-                      </span>
-                      <span className="font-medium text-slate-700 flex items-center"><Briefcase className="w-3.5 h-3.5 mr-1 text-slate-400"/> {job.umkm}</span>
-                      <span className="hidden md:inline text-slate-300">•</span>
-                      <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1 text-slate-400"/> {job.lokasi}</span>
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-[10px] uppercase border border-indigo-100 shrink-0">
+                        {job.umkm.charAt(0)}
+                      </div>
+                      <p className="text-sm font-bold text-slate-700 truncate">{job.umkm}</p>
+                    </div>
+                    
+                    <div className="flex items-center text-xs text-slate-500 mb-4 font-medium">
+                      <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400"/> {job.lokasi}
                     </div>
 
-                    <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed mb-4">
+                    <p className="text-slate-500 text-sm line-clamp-2 leading-relaxed flex-1 mb-4">
                       {job.deskripsi}
                     </p>
 
-                    <div className="flex flex-wrap gap-2">
-                      {job.tags.map((tag, idx) => (
-                        <span key={idx} className="bg-slate-50 text-slate-600 text-xs font-medium px-2 py-1 rounded border border-slate-200">
-                          {tag}
-                        </span>
-                      ))}
+                    <div className="flex justify-between items-end mt-auto pt-4 border-t border-slate-100">
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest mb-1">Upah</p>
+                        <p className="text-base font-black text-emerald-600">{job.harga}</p>
+                      </div>
+                      <p className="text-[11px] font-bold text-slate-400 flex items-center bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                        <Clock className="w-3 h-3 mr-1.5"/>{job.waktuPost}
+                      </p>
                     </div>
-                  </div>
-
-                  {/* Sisi Kanan (Harga & Waktu) */}
-                  <div className="md:w-32 flex flex-col justify-between items-start md:items-end pt-4 md:pt-0">
-                    <div className="text-left md:text-right">
-                      <p className="text-[11px] text-slate-400 font-semibold mb-1 uppercase tracking-wider">Upah</p>
-                      <p className="text-base font-bold text-slate-900">{job.harga}</p>
-                    </div>
-                    <p className="text-xs text-slate-400 font-medium mt-4 md:mt-0">{job.waktuPost}</p>
                   </div>
                 </div>
               ))
@@ -348,25 +364,34 @@ export default function CariLowongan() {
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex justify-center items-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-slate-200">
             
-            {/* Header Pop-up */}
-            <div className="bg-white border-b border-slate-100 p-6 md:p-8 flex items-start justify-between relative">
+            {/* Header Pop-up (Image Banner) */}
+            <div className="relative w-full h-48 md:h-64 bg-slate-100 shrink-0">
+              <img 
+                src={selectedJob.logoPerusahaan} 
+                alt={selectedJob.umkm} 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent"></div>
+              
               <button 
                 onClick={() => setSelectedJob(null)} 
-                className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 p-2 rounded-lg transition"
+                className="absolute top-4 right-4 text-white hover:text-rose-400 bg-black/20 hover:bg-black/40 backdrop-blur-sm p-2 rounded-full transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
               
-              <div className="flex gap-5 pr-10">
-                  <img 
-                    src={selectedJob.logoPerusahaan} 
-                    alt={selectedJob.umkm} 
-                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-slate-200 shadow-sm"
-                  />
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 leading-tight mb-1">{selectedJob.judul}</h2>
-                    <p className="text-slate-500 font-semibold text-sm">{selectedJob.umkm}</p>
-                  </div>
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-md shadow-sm">
+                    {selectedJob.tipeKerja}
+                  </span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md">
+                  {selectedJob.judul}
+                </h2>
+                <div className="flex items-center text-slate-200 font-medium text-sm">
+                  <Briefcase className="w-4 h-4 mr-2 opacity-80" /> {selectedJob.umkm}
+                </div>
               </div>
             </div>
 
@@ -394,12 +419,7 @@ export default function CariLowongan() {
                   {/* Detail Info Bar */}
                   <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex flex-wrap gap-x-8 gap-y-4 mb-6 relative overflow-hidden">
                     <div className={`absolute right-0 top-0 bottom-0 w-1 ${selectedJob.tipeKerja === 'Proyek Lepas' ? 'bg-slate-400' : 'bg-slate-800'}`}></div>
-                    <div>
-                      <p className="text-[11px] text-slate-400 uppercase font-semibold mb-1">Tipe</p>
-                      <div className={`font-semibold text-sm ${selectedJob.tipeKerja === 'Proyek Lepas' ? 'text-slate-600' : 'text-slate-900'}`}>
-                        {selectedJob.tipeKerja}
-                      </div>
-                    </div>
+                    {/* (Tipe is removed since it's on banner) */}
                     <div>
                       <p className="text-[11px] text-slate-400 uppercase font-semibold mb-1">Lokasi</p>
                       <div className="flex items-center text-slate-700 font-medium text-sm">

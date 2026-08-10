@@ -88,7 +88,30 @@ export default function DashboardUMKM() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const handleDeleteJob = async (jobId) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus lowongan ini? Semua data lamaran untuk lowongan ini juga akan terhapus.")) return;
 
+    try {
+      const token = localStorage.getItem('token');
+      
+      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Gagal menghapus lowongan');
+      }
+
+      showToast("Lowongan berhasil dihapus!");
+      setProyekAktif(prev => prev.filter(p => p.id !== jobId));
+    } catch (error) {
+      alert("Error: " + error.message);
+    }
+  };
 
   const handlePostingSubmit = async (e) => {
     e.preventDefault();
@@ -763,6 +786,13 @@ export default function DashboardUMKM() {
                           title="Detail & Edit Proyek"
                         >
                           <Settings className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteJob(proyek.id)}
+                          className="p-3 bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 rounded-2xl transition cursor-pointer"
+                          title="Hapus Lowongan"
+                        >
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
