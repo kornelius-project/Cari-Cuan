@@ -177,24 +177,57 @@ export default function ProfilMahasiswa() {
   };
 
   // --- STATE PORTOFOLIO ---
-  const [portofolio, setPortofolio] = useState(() => {
-    const saved = JSON.parse(localStorage.getItem('mahasiswaPortofolio'));
-    return saved || [];
-  });
-
+  const [portofolio, setPortofolio] = useState([]);
+  
   useEffect(() => {
-    localStorage.setItem('mahasiswaPortofolio', JSON.stringify(portofolio));
-  }, [portofolio]);
+    const fetchPortofolio = async () => {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        try {
+          const response = await fetch(`http://localhost:5000/api/portfolios/${userId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setPortofolio(data);
+          }
+        } catch (e) {
+          console.error('Failed to fetch portfolio', e);
+        }
+      }
+    };
+    fetchPortofolio();
+  }, []);
 
   const [isAddingPort, setIsAddingPort] = useState(false);
   const [newPort, setNewPort] = useState({ judul: "", kategori: "", link: "", deskripsi: "", image: "" });
 
-  const handleAddPort = (e) => {
+  const handleAddPort = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem('token');
     const imgToSave = newPort.image || "/freelance5.png";
-    setPortofolio([...portofolio, { id: Date.now(), ...newPort, image: imgToSave }]);
-    setNewPort({ judul: "", kategori: "", link: "", deskripsi: "", image: "" });
-    setIsAddingPort(false);
+    try {
+      const response = await fetch('http://localhost:5000/api/portfolios', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newPort.judul,
+          kategori: newPort.kategori,
+          link: newPort.link,
+          description: newPort.deskripsi,
+          imageUrl: imgToSave
+        })
+      });
+      if (response.ok) {
+        const savedPort = await response.json();
+        setPortofolio([savedPort, ...portofolio]);
+        setNewPort({ judul: "", kategori: "", link: "", deskripsi: "", image: "" });
+        setIsAddingPort(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handlePortImageChange = (e) => {
@@ -601,13 +634,13 @@ export default function ProfilMahasiswa() {
                   {portofolio.length > 0 ? portofolio.map(port => (
                     <div key={port.id} className="border border-gray-200 rounded-xl overflow-hidden group">
                       <div className="h-32 bg-gray-100 relative overflow-hidden">
-                        <img src={port.image} alt={port.judul} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                        <img src={port.imageUrl || port.image} alt={port.title || port.judul} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                         <button onClick={() => handleRemovePort(port.id)} className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition shadow-sm"><Trash2 className="w-4 h-4"/></button>
                       </div>
                       <div className="p-4">
                         <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">{port.kategori}</p>
-                        <h4 className="font-bold text-gray-900 text-sm mb-1">{port.judul}</h4>
-                        <p className="text-gray-500 text-xs line-clamp-2">{port.deskripsi}</p>
+                        <h4 className="font-bold text-gray-900 text-sm mb-1">{port.title || port.judul}</h4>
+                        <p className="text-gray-500 text-xs line-clamp-2">{port.description || port.deskripsi}</p>
                       </div>
                     </div>
                   )) : (

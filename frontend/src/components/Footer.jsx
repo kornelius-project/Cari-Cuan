@@ -302,37 +302,47 @@ export default function Footer() {
 
       {/* ROLE RESTRICTION ALERT MODAL */}
       {roleAlert && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[100] flex justify-center items-center p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl text-white relative">
-            <div className="p-6 text-center">
-              <div className="w-14 h-14 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-7 h-7" />
+        <div className="fixed inset-0 bg-slate-950/80 z-[100] flex justify-center items-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_0_40px_-10px_rgba(0,0,0,0.5)] text-white relative animate-in zoom-in-95 duration-300 ease-out">
+            {/* Top decorative glow */}
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent ${roleAlert.type === 'guest' ? 'via-amber-500' : 'via-rose-500'} to-transparent opacity-50`}></div>
+            
+            <div className="p-8 text-center relative overflow-hidden">
+              {/* Background Glow */}
+              <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 ${roleAlert.type === 'guest' ? 'bg-amber-500/20' : 'bg-rose-500/20'} rounded-full blur-3xl -z-10`}></div>
+              
+              <div className={`w-16 h-16 bg-gradient-to-br ${roleAlert.type === 'guest' ? 'from-amber-400/20 to-amber-600/20 border-amber-500/30 text-amber-400 shadow-amber-500/20' : 'from-rose-400/20 to-rose-600/20 border-rose-500/30 text-rose-400 shadow-rose-500/20'} border rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner`}>
+                <AlertCircle className="w-8 h-8 drop-shadow-md" />
               </div>
-              <h3 className="text-xl font-extrabold mb-2">{roleAlert.title}</h3>
-              <p className="text-slate-300 text-xs leading-relaxed mb-6">
+              
+              <h3 className="text-2xl font-extrabold mb-3 tracking-tight bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
+                {roleAlert.title}
+              </h3>
+              
+              <p className="text-slate-400 text-sm leading-relaxed mb-8 font-medium">
                 {roleAlert.message}
               </p>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3">
                 {roleAlert.type === 'guest' ? (
                   <>
                     <button 
                       onClick={() => { setRoleAlert(null); navigate('/login'); }}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-3 px-4 rounded-xl text-xs transition cursor-pointer"
+                      className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl text-sm transition-all shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] hover:shadow-[0_0_25px_-5px_rgba(79,70,229,0.7)] hover:-translate-y-0.5 cursor-pointer border border-indigo-500/30"
                     >
                       Masuk ke Akun
                     </button>
                     <button 
                       onClick={() => setRoleAlert(null)}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-4 rounded-xl text-xs transition cursor-pointer"
+                      className="w-full bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 font-bold py-3.5 px-4 rounded-xl text-sm transition-colors cursor-pointer border border-slate-700/50 hover:border-slate-600/50"
                     >
-                      Tutup
+                      Nanti Saja
                     </button>
                   </>
                 ) : (
                   <button 
                     onClick={() => setRoleAlert(null)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-3 px-4 rounded-xl text-xs transition cursor-pointer"
+                    className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3.5 px-4 rounded-xl text-sm transition-all shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] hover:shadow-[0_0_25px_-5px_rgba(79,70,229,0.7)] hover:-translate-y-0.5 cursor-pointer border border-indigo-500/30"
                   >
                     Mengerti & Tutup
                   </button>

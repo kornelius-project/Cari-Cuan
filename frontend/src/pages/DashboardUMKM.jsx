@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Briefcase, Activity, ShieldCheck, CheckCircle, 
-  Plus, Users, Layers, Check, X, Download, Star, MapPin, AlertCircle, Sparkles, Filter, Store,
-  Wallet, CreditCard, QrCode, ArrowUpRight, RefreshCw, Settings, Trash2, Image as ImageIcon, LinkIcon, FileText
+  Plus, Users, Layers, Check, X, Download, Star, AlertCircle, Sparkles, Store,
+  Wallet, CreditCard, QrCode, RefreshCw, Settings, Trash2, Image as ImageIcon, LinkIcon, FileText, Search
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardUMKM() {
   const navigate = useNavigate();
@@ -14,11 +15,17 @@ export default function DashboardUMKM() {
   const userRole = localStorage.getItem('userRole') || 'guest';
   const rawUserName = localStorage.getItem('userName');
   const storeName = (isLoggedIn && userRole === 'umkm' && rawUserName) ? rawUserName : 'Mitra UMKM';
-  const [kycVerified, setKycVerified] = useState(false);
+  const [kycVerified] = useState(() => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr).kycStatus === 'VERIFIED' : false;
+  });
 
   // --- STATE DOMPET DIGITAL (SALDO UMKM) ---
   const [saldoBisnis, setSaldoBisnis] = useState(0);
   const [riwayatTransaksi, setRiwayatTransaksi] = useState([]);
+  
+  // --- STATE KANDIDAT PORTOFOLIO ---
+  const [candidatePortfolio, setCandidatePortfolio] = useState([]);
 
   const fetchWallet = async () => {
     try {
@@ -38,15 +45,13 @@ export default function DashboardUMKM() {
   };
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setKycVerified(user.kycStatus === 'VERIFIED');
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchWallet();
     window.addEventListener('storage', fetchWallet);
     return () => window.removeEventListener('storage', fetchWallet);
   }, []);
+
+
 
   // --- STATE DATA ---
   const [daftarProyekUMKM, setProyekAktif] = useState([]);
@@ -272,8 +277,6 @@ export default function DashboardUMKM() {
       });
       
       if (response.ok) {
-        setSelectedPortfolio(null);
-        setSelectedApplicantsId(null);
         fetchWallet();
         
         // Update local state so UI reflects it immediately
@@ -321,46 +324,7 @@ export default function DashboardUMKM() {
     }
   };
 
-  const handleApproveApplication = async (appId, mahasiswaId, projectId, amount, jobTitle, jobType) => {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/applications/${appId}/approve`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ amount })
-        });
-        
-        if (response.ok) {
-          fetchWallet();
-          // Update local state so UI reflects it immediately
-          setProyekAktif(prev => prev.map(p => {
-          if (p.id === projectId) {
-            return {
-              ...p,
-              status: 'Selesai',
-              isApproved: true,
-              applications: p.applications.map(a => 
-                a.id === appId ? { ...a, status: 'APPROVED' } : { ...a, status: 'REJECTED' }
-              )
-            };
-          }
-          return p;
-        }));
-        showToast(`Karya Disetujui! Rp ${amount.toLocaleString('id-ID')} dicairkan ke Dompet Mahasiswa.`);
-      } else {
-        showToast("Gagal menyetujui karya", "error");
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("Terjadi kesalahan server", "error");
-    }
-  };
-
   // --- CALCULATIONS ---
-  const totalDanaEscrow = (daftarProyekUMKM || []).reduce((acc, p) => p?.isApproved ? acc : acc + (p?.budget || 0), 0);
   const activeProjects = (daftarProyekUMKM || []).filter(p => !p?.isApproved).length;
   const totalKandidat = (daftarProyekUMKM || []).reduce((acc, p) => p?.isApproved ? acc : acc + (p?.kandidatCount || 0), 0);
 
@@ -373,8 +337,27 @@ export default function DashboardUMKM() {
   const [isProcessingTopUp, setIsProcessingTopUp] = useState(false);
   const [selectedApplicantsId, setSelectedApplicantsId] = useState(null);
   const [activeApplicantId, setActiveApplicantId] = useState(101);
+
+  useEffect(() => {
+    const fetchCandidatePortfolio = async () => {
+      if (activeApplicantId) {
+        try {
+          const response = await fetch(`http://localhost:5000/api/portfolios/${activeApplicantId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setCandidatePortfolio(data);
+          } else {
+            setCandidatePortfolio([]);
+          }
+        } catch (e) {
+          console.error(e);
+          setCandidatePortfolio([]);
+        }
+      }
+    };
+    fetchCandidatePortfolio();
+  }, [activeApplicantId]);
   const [selectedReviewId, setSelectedReviewId] = useState(null);
-  const [selectedPortfolio, setSelectedPortfolio] = useState(null);
   const [filterTipe, setFilterTipe] = useState('semua');
   const [editingProject, setEditingProject] = useState(null);
   const [editFormData, setEditFormData] = useState({ judul: '', tipeKerja: '', budget: '', deskripsi: '' });
@@ -400,7 +383,7 @@ export default function DashboardUMKM() {
 
   const handleCompleteAndRate = async () => {
     try {
-      const { appId, projectId, amount, rating, jobType } = ratingModal;
+      const { appId, projectId, amount, rating } = ratingModal;
       const token = localStorage.getItem('token');
       
       // 1. Call Complete/Rate endpoint
@@ -459,7 +442,9 @@ export default function DashboardUMKM() {
           }
           const mSkills = JSON.parse(localStorage.getItem('mahasiswaSkills'));
           if (mSkills && mSkills.length > 0) skillsArr = mSkills;
-        } catch(e) {}
+        } catch {
+          // ignore parsing error
+        }
 
         return {
           id: app.mahasiswa?.id || app.mahasiswaId,
@@ -469,7 +454,7 @@ export default function DashboardUMKM() {
           univ: "Universitas Negeri",
           jurusan: jurusanStr,
           rating: 4.8, 
-          jobsDone: Math.floor(Math.random() * 5) + 1, 
+          jobsDone: ((app.id || 1) % 5) + 1, 
           avatar: avatarUrl,
           skills: skillsArr,
           pesanLamaran: app.coverLetter || "Tidak ada pesan pengantar (atau ini lamaran jalur sayembara).",
@@ -513,7 +498,7 @@ export default function DashboardUMKM() {
         const data = await response.json();
         showToast(data.error || 'Top up gagal', 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Terjadi kesalahan koneksi', 'error');
     }
     setIsProcessingTopUp(false);
@@ -542,7 +527,7 @@ export default function DashboardUMKM() {
         </div>
       )}
 
-      <main className="flex-1 w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 py-10">
+      <main className="flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10">
         
         {/* BANNER PENJELASAN (JIKA BELUM LOGIN SEBAGAI UMKM) */}
         {(!isLoggedIn || userRole !== 'umkm') && (
@@ -590,14 +575,14 @@ export default function DashboardUMKM() {
           {kycVerified ? (
             <button 
               onClick={() => setShowPostingForm(true)}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer border border-slate-800 shrink-0"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer border border-slate-800 shrink-0 w-full sm:w-auto"
             >
               <Plus className="w-4 h-4" /> Posting Proyek Baru
             </button>
           ) : (
             <Link 
               to="/kyc"
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer border border-amber-600 shrink-0"
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer border border-amber-600 shrink-0 w-full sm:w-auto"
             >
               <ShieldCheck className="w-4 h-4" /> Verifikasi KYC untuk Posting
             </Link>
@@ -664,6 +649,62 @@ export default function DashboardUMKM() {
             </div>
           </div>
 
+        </div>
+
+        {/* GRAFIK ANALITIK PENGELUARAN UMKM */}
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-3xl shadow-sm border border-slate-200/80 mb-8 overflow-x-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 sm:mb-8 min-w-min">
+            <div>
+              <h2 className="text-2xl font-extrabold text-slate-900">Analitik Keuangan</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Tren pemasukan dan pengeluaran proyek (7 hari terakhir)</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-bold">
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-indigo-500"></span> Pengeluaran</div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500"></span> Pemasukan (Top Up)</div>
+            </div>
+          </div>
+          
+          <div className="h-[300px] w-full">
+            {riwayatTransaksi?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={
+                  // Group transactions by date (last 7 days logic simplified to grouping existing data by local date)
+                  Object.values((riwayatTransaksi || []).reduce((acc, t) => {
+                    const date = new Date(t.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                    if (!acc[date]) acc[date] = { name: date, Pengeluaran: 0, Pemasukan: 0 };
+                    if (t.type === 'Keluar') acc[date].Pengeluaran += t.amount;
+                    if (t.type === 'Masuk') acc[date].Pemasukan += t.amount;
+                    return acc;
+                  }, {})).reverse().slice(-7) // take last 7 distinct dates
+                }>
+                  <defs>
+                    <linearGradient id="colorKeluar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorMasuk" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dx={-10} tickFormatter={(value) => `Rp${value/1000}k`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px -2px rgba(0,0,0,0.1)' }}
+                    formatter={(value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)}
+                  />
+                  <Area type="monotone" dataKey="Pemasukan" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorMasuk)" />
+                  <Area type="monotone" dataKey="Pengeluaran" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorKeluar)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                <Activity className="w-12 h-12 mb-3 text-slate-200" />
+                <p className="text-sm font-medium">Belum ada data transaksi untuk dianalisis.</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* DAFTAR PROYEK MANAGEMENT SECTION */}
@@ -944,14 +985,21 @@ export default function DashboardUMKM() {
 
                       {/* Sample Portfolio */}
                       <div>
-                        <h4 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2">Sampel Hasil Kerja / Portofolio</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {candidate.portfolioImages.map((img, i) => (
-                            <div key={i} className="h-28 rounded-xl overflow-hidden border border-slate-200 shadow-xs relative group">
-                              <img src={img} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="Portofolio" />
-                            </div>
-                          ))}
-                        </div>
+                        <h4 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2">Galeri Portofolio & Proyek Unggulan</h4>
+                        {candidatePortfolio?.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {(candidatePortfolio || []).map((port) => (
+                              <a href={port.link || '#'} target="_blank" rel="noopener noreferrer" key={port.id} className="h-28 rounded-xl overflow-hidden border border-slate-200 shadow-xs relative group block">
+                                <img src={port.imageUrl || '/freelance5.png'} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt={port.title} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition duration-300 flex items-end p-2">
+                                  <p className="text-white text-[10px] font-bold truncate">{port.title}</p>
+                                </div>
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">Kandidat ini belum menambahkan portofolio di profilnya.</p>
+                        )}
                       </div>
 
                       {/* Recruitment Action Buttons */}
@@ -1006,7 +1054,7 @@ export default function DashboardUMKM() {
                   <div className="text-center py-12 text-slate-400 font-medium">Belum ada mahasiswa yang mengirimkan karya.</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {submissions.map((app, idx) => (
+                    {submissions.map((app) => (
                       <div key={app.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                           <div>

@@ -33,6 +33,7 @@ model User {
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
   transactions     Transaction[]
+  portfolios       Portfolio[]
 }
 
 model Job {
@@ -87,5 +88,17 @@ model Transaction {
   description String
   createdAt   DateTime @default(now())
 
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Portfolio {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  imageUrl    String?
+  link        String?
+  createdAt   DateTime @default(now())
+
+  userId      Int
   user        User     @relation(fields: [userId], references: [id])
 }

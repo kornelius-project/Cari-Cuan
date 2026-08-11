@@ -815,6 +815,42 @@ app.get('/api/messages/history/:userId/:contactId', async (req, res) => {
   }
 });
 
+// --- PORTFOLIOS ---
+
+// Get portfolios by user ID
+app.get('/api/portfolios/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const portfolios = await prisma.portfolio.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(portfolios);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add a portfolio
+app.post('/api/portfolios', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, imageUrl, link } = req.body;
+    const userId = req.user.id;
+    const portfolio = await prisma.portfolio.create({
+      data: {
+        title,
+        description,
+        imageUrl,
+        link,
+        userId
+      }
+    });
+    res.status(201).json(portfolio);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // In-memory notifications store (MVP)
 const globalNotifications = [];
 
