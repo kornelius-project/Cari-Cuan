@@ -54,8 +54,11 @@ export default function DashboardUMKM() {
   useEffect(() => {
     if (isLoggedIn && userRole === 'umkm') {
       const userId = localStorage.getItem('userId');
-      if (userId) {
-        fetch(`http://localhost:5000/api/jobs/umkm/${userId}`)
+      const token = localStorage.getItem('token');
+      if (userId && token) {
+        fetch(`http://localhost:5000/api/jobs/umkm/${userId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
           .then(res => res.json())
           .then(data => {
             const mappedJobs = data.map(job => ({
@@ -133,9 +136,13 @@ export default function DashboardUMKM() {
 
     try {
       const userId = parseInt(localStorage.getItem('userId'));
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:5000/api/jobs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           title: formData.judul,
           description: formData.deskripsi + (formData.persyaratan ? `\n\nPersyaratan Khusus:\n${formData.persyaratan}` : ''),
@@ -191,9 +198,13 @@ export default function DashboardUMKM() {
     }
 
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:5000/api/jobs/${editingProject}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           title: editFormData.judul,
           description: editFormData.deskripsi,
@@ -229,8 +240,10 @@ export default function DashboardUMKM() {
     if (!window.confirm("Apakah Anda yakin ingin menghapus proyek ini?")) return;
     
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:5000/api/jobs/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {

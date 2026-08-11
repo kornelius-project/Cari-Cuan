@@ -312,7 +312,7 @@ app.delete('/api/jobs/:id', authenticateToken, async (req, res) => {
 });
 
 // Create a job (Untuk UMKM)
-app.post('/api/jobs', async (req, res) => {
+app.post('/api/jobs', authenticateToken, async (req, res) => {
   try {
     const { title, description, salary, location, type, umkmId, imageUrl } = req.body;
     
@@ -375,7 +375,7 @@ app.post('/api/jobs', async (req, res) => {
 });
 
 // Get jobs posted by a specific UMKM
-app.get('/api/jobs/umkm/:umkmId', async (req, res) => {
+app.get('/api/jobs/umkm/:umkmId', authenticateToken, async (req, res) => {
   try {
     const umkmId = parseInt(req.params.umkmId);
     const jobs = await prisma.job.findMany({
@@ -398,10 +398,15 @@ app.get('/api/jobs/umkm/:umkmId', async (req, res) => {
 });
 
 // Edit a job
-app.put('/api/jobs/:id', async (req, res) => {
+app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { title, description, salary, location, type } = req.body;
+    
+    const jobCheck = await prisma.job.findUnique({ where: { id } });
+    if (!jobCheck) return res.status(404).json({ error: 'Job not found' });
+    if (jobCheck.umkmId !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
     const job = await prisma.job.update({
       where: { id },
       data: { title, description, salary, location, type }
@@ -412,23 +417,10 @@ app.put('/api/jobs/:id', async (req, res) => {
   }
 });
 
-// Delete a job
-app.delete('/api/jobs/:id', async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    // Delete associated applications first to prevent foreign key errors
-    await prisma.application.deleteMany({ where: { jobId: id } });
-    await prisma.job.delete({ where: { id } });
-    res.json({ message: 'Job deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // --- APPLICATIONS ---
 
 // Create application (Mahasiswa melamar)
-app.post('/api/applications', upload.single('file'), async (req, res) => {
+app.post('/api/applications', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     const jobId = parseInt(req.body.jobId);
     const mahasiswaId = parseInt(req.body.mahasiswaId);
@@ -464,7 +456,7 @@ app.post('/api/applications', upload.single('file'), async (req, res) => {
 });
 
 // Get applications for a Mahasiswa
-app.get('/api/applications/mahasiswa/:id', async (req, res) => {
+app.get('/api/applications/mahasiswa/:id', authenticateToken, async (req, res) => {
   try {
     const mahasiswaId = parseInt(req.params.id);
     const applications = await prisma.application.findMany({
@@ -576,10 +568,15 @@ app.put('/api/applications/:id/approve', authenticateToken, async (req, res) => 
 });
 
 // Update application status (UMKM terima/tolak)
-app.put('/api/applications/:id', async (req, res) => {
+app.put('/api/applications/:id', authenticateToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { status } = req.body;
+
+    const applicationCheck = await prisma.application.findUnique({ where: { id }, include: { job: true } });
+    if (!applicationCheck) return res.status(404).json({ error: 'Not found' });
+    if (applicationCheck.job.umkmId !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
     const application = await prisma.application.update({
       where: { id },
       data: { status }

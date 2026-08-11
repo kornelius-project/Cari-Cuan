@@ -580,8 +580,12 @@ export default function CariLowongan() {
                                 formData.append('coverLetter', coverLetter);
                               }
 
+                              const token = localStorage.getItem('token');
                               const response = await fetch('http://localhost:5000/api/applications', {
                                 method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                },
                                 body: formData
                               });
                               const data = await response.json();
