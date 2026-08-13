@@ -70,6 +70,7 @@ export default function DashboardUMKM() {
               id: job.id,
               judul: job.title,
               tipeKerja: job.type || "Part-Time",
+              kategori: job.category || "Desain Grafis",
               waktu: new Date(job.createdAt).toLocaleDateString('id-ID'),
               status: job.status === 'open' ? 'Mencari Kandidat' : 'Selesai',
               budget: parseInt(job.salary?.replace(/\D/g, '')) || 0,
@@ -88,7 +89,7 @@ export default function DashboardUMKM() {
 
   // Form Posting
   const [formError, setFormError] = useState('');
-  const [formData, setFormData] = useState({ judul: '', tipeKerja: 'Part-Time', budget: '', deskripsi: '', persyaratan: '', gambar: '' });
+  const [formData, setFormData] = useState({ judul: '', kategori: 'Desain Grafis', tipeKerja: 'Part-Time', budget: '', deskripsi: '', persyaratan: '', gambar: '' });
 
   // --- HELPER FUNCTIONS ---
   const showToast = (message, type = 'success') => {
@@ -153,7 +154,8 @@ export default function DashboardUMKM() {
           description: formData.deskripsi + (formData.persyaratan ? `\n\nPersyaratan Khusus:\n${formData.persyaratan}` : ''),
           salary: `Rp ${cost.toLocaleString('id-ID')}`,
           location: 'Remote',
-          type: formData.tipeKerja.includes('Sayembara') ? 'Sayembara' : 'Part-Time',
+          type: formData.tipeKerja,
+          category: formData.kategori,
           umkmId: userId,
           imageUrl: formData.gambar
         })
@@ -168,6 +170,7 @@ export default function DashboardUMKM() {
           id: newJob.id,
           judul: newJob.title,
           tipeKerja: newJob.type,
+          kategori: newJob.category || formData.kategori,
           waktu: new Date(newJob.createdAt).toLocaleDateString('id-ID'),
           status: newJob.status === 'open' ? 'Mencari Kandidat' : 'Selesai',
           budget: cost,
@@ -178,7 +181,7 @@ export default function DashboardUMKM() {
         }, ...daftarProyekUMKM]);
 
         showToast(`Pekerjaan diposting! Anggaran Rp ${cost.toLocaleString('id-ID')} dialokasikan ke Escrow & Biaya Publikasi Rp 25.000 dipotong.`);
-        setFormData({ judul: '', tipeKerja: 'Part-Time', budget: '', deskripsi: '', persyaratan: '', gambar: '' });
+        setFormData({ judul: '', kategori: 'Desain Grafis', tipeKerja: 'Part-Time', budget: '', deskripsi: '', persyaratan: '', gambar: '' });
         setShowPostingForm(false);
       } else {
         const errData = await response.json();
@@ -215,7 +218,8 @@ export default function DashboardUMKM() {
           description: editFormData.deskripsi,
           salary: `Rp ${cost.toLocaleString('id-ID')}`,
           location: 'Remote',
-          type: editFormData.tipeKerja.includes('Sayembara') ? 'Sayembara' : 'Part-Time'
+          type: editFormData.tipeKerja,
+          category: editFormData.kategori
         })
       });
 
@@ -226,6 +230,7 @@ export default function DashboardUMKM() {
             ...p,
             judul: updatedJob.title,
             tipeKerja: updatedJob.type,
+            kategori: updatedJob.category || editFormData.kategori,
             budget: cost,
             deskripsi: updatedJob.description
           } : p
@@ -360,7 +365,7 @@ export default function DashboardUMKM() {
   const [selectedReviewId, setSelectedReviewId] = useState(null);
   const [filterTipe, setFilterTipe] = useState('semua');
   const [editingProject, setEditingProject] = useState(null);
-  const [editFormData, setEditFormData] = useState({ judul: '', tipeKerja: '', budget: '', deskripsi: '' });
+  const [editFormData, setEditFormData] = useState({ judul: '', kategori: 'Desain Grafis', tipeKerja: '', budget: '', deskripsi: '' });
 
   // RATING MODAL STATE
   const [ratingModal, setRatingModal] = useState({
@@ -466,6 +471,7 @@ export default function DashboardUMKM() {
 
   const filteredProyek = (daftarProyekUMKM || []).filter(p => {
     if (filterTipe === 'part-time') return p?.tipeKerja === 'Part-Time';
+    if (filterTipe === 'proyek-lepas') return p?.tipeKerja === 'Proyek Lepas';
     if (filterTipe === 'sayembara') return p?.tipeKerja === 'Sayembara';
     return true;
   });
@@ -730,6 +736,12 @@ export default function DashboardUMKM() {
                 Part-Time
               </button>
               <button 
+                onClick={() => setFilterTipe('proyek-lepas')}
+                className={`px-3 py-1.5 rounded-lg transition ${filterTipe === 'proyek-lepas' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+              >
+                Proyek Lepas
+              </button>
+              <button 
                 onClick={() => setFilterTipe('sayembara')}
                 className={`px-3 py-1.5 rounded-lg transition ${filterTipe === 'sayembara' ? 'bg-white text-pink-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
               >
@@ -831,6 +843,7 @@ export default function DashboardUMKM() {
                             setEditingProject(proyek.id);
                             setEditFormData({
                               judul: proyek.judul,
+                              kategori: proyek.kategori || 'Desain Grafis',
                               tipeKerja: proyek.tipeKerja,
                               budget: proyek.budget,
                               deskripsi: proyek.deskripsi || '' // Note: we need deskripsi from API
@@ -1243,18 +1256,35 @@ export default function DashboardUMKM() {
                       {formError && <p className="text-rose-500 text-xs font-bold mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {formError}</p>}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Sistem Pekerjaan</label>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Kategori Pekerjaan</label>
+                        <select 
+                          value={formData.kategori}
+                          onChange={e => setFormData({...formData, kategori: e.target.value})}
+                          className="w-full p-3.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-bold text-slate-800 shadow-sm"
+                        >
+                          <option value="Desain Grafis">Desain Grafis</option>
+                          <option value="Digital Marketing">Digital Marketing</option>
+                          <option value="Jasa Fisik & Lapangan">Jasa Fisik & Lapangan</option>
+                          <option value="Administrasi & Data">Administrasi & Data</option>
+                          <option value="Teknologi">Teknologi</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Tipe Pekerjaan</label>
                         <select 
                           value={formData.tipeKerja}
                           onChange={e => setFormData({...formData, tipeKerja: e.target.value})}
                           className="w-full p-3.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-bold text-slate-800 shadow-sm"
                         >
-                          <option>Part-Time (Pekerjaan Berdurasi)</option>
-                          <option>Sayembara (Lomba Desain / Karya)</option>
+                          <option value="Part-Time">Part Time(Perkerjaan Durasi)</option>
+                          <option value="Proyek Lepas">Proyek Lepas (Freelance)</option>
+                          <option value="Sayembara">Sayembara (Lomba)</option>
                         </select>
                       </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-5">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Anggaran / Upah (Rp)</label>
                         <div className="relative">
@@ -1334,7 +1364,7 @@ export default function DashboardUMKM() {
                   <div className="pt-4 pb-8">
                     <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-1 text-white font-extrabold rounded-xl transition-all duration-300 shadow-xl shadow-indigo-600/30 cursor-pointer text-sm flex items-center justify-center gap-2 group">
                       <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      {formData.tipeKerja.includes('Sayembara') ? 'Posting & Alokasikan Rekber' : 'Posting Lowongan Part-Time'}
+                      {formData.tipeKerja.includes('Sayembara') ? 'Posting & Alokasikan Rekber' : `Posting Lowongan ${formData.tipeKerja}`}
                     </button>
                     <p className="text-[11px] text-center text-slate-400 mt-4 font-semibold uppercase tracking-wider">
                       {formData.tipeKerja.includes('Sayembara') 
@@ -1374,16 +1404,33 @@ export default function DashboardUMKM() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Tipe Kerja <span className="text-rose-500">*</span></label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Kategori <span className="text-rose-500">*</span></label>
+                    <select 
+                      value={editFormData.kategori}
+                      onChange={(e) => setEditFormData({...editFormData, kategori: e.target.value})}
+                      className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-bold text-slate-800"
+                    >
+                      <option value="Desain Grafis">Desain Grafis</option>
+                      <option value="Digital Marketing">Digital Marketing</option>
+                      <option value="Jasa Fisik & Lapangan">Jasa Fisik & Lapangan</option>
+                      <option value="Administrasi & Data">Administrasi & Data</option>
+                      <option value="Teknologi">Teknologi</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Tipe Pekerjaan <span className="text-rose-500">*</span></label>
                     <select 
                       value={editFormData.tipeKerja}
                       onChange={(e) => setEditFormData({...editFormData, tipeKerja: e.target.value})}
                       className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-bold text-slate-800"
                     >
-                      <option value="Part-Time">Part-Time</option>
-                      <option value="Sayembara">Sayembara</option>
+                      <option value="Part-Time">Part Time(Perkerjaan Durasi)</option>
+                      <option value="Proyek Lepas">Proyek Lepas (Freelance)</option>
+                      <option value="Sayembara">Sayembara (Lomba)</option>
                     </select>
                   </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Budget (Rp) <span className="text-rose-500">*</span></label>
                     <input 

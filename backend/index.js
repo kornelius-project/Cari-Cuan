@@ -314,7 +314,7 @@ app.delete('/api/jobs/:id', authenticateToken, async (req, res) => {
 // Create a job (Untuk UMKM)
 app.post('/api/jobs', authenticateToken, async (req, res) => {
   try {
-    const { title, description, salary, location, type, umkmId, imageUrl } = req.body;
+    const { title, description, salary, location, type, category, umkmId, imageUrl } = req.body;
     
     // Check KYC & Balance
     const umkm = await prisma.user.findUnique({ where: { id: parseInt(umkmId) } });
@@ -336,7 +336,7 @@ app.post('/api/jobs', authenticateToken, async (req, res) => {
     // Process Transaction and Job Creation
     const dbOperations = [
       prisma.job.create({
-        data: { title, description, salary, location, type, umkmId, imageUrl }
+        data: { title, description, salary, location, type, category, umkmId, imageUrl }
       }),
       prisma.user.update({
         where: { id: parseInt(umkmId) },
@@ -401,7 +401,7 @@ app.get('/api/jobs/umkm/:umkmId', authenticateToken, async (req, res) => {
 app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { title, description, salary, location, type } = req.body;
+    const { title, description, salary, location, type, category } = req.body;
     
     const jobCheck = await prisma.job.findUnique({ where: { id } });
     if (!jobCheck) return res.status(404).json({ error: 'Job not found' });
@@ -409,7 +409,7 @@ app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
 
     const job = await prisma.job.update({
       where: { id },
-      data: { title, description, salary, location, type }
+      data: { title, description, salary, location, type, category }
     });
     res.json(job);
   } catch (error) {
@@ -668,7 +668,7 @@ app.post('/api/applications/:id/complete', authenticateToken, async (req, res) =
   }
 });
 
-// --- SOCKET.IO CHAT ---
+// --- SOCKET.IO CHAT & NOTIFICATIONS ---
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
@@ -687,6 +687,20 @@ io.on('connection', (socket) => {
       io.to(receiverId.toString()).emit('receiveMessage', msg);
       // Also emit back to sender for multi-tab sync
       io.to(senderId.toString()).emit('messageSent', msg);
+
+      // Create and emit notification for receiver
+      const notif = {
+        id: Date.now(),
+        userId: parseInt(receiverId),
+        title: 'Pesan Baru 💬',
+        message: text.length > 30 ? text.substring(0, 30) + '...' : text,
+        time: new Date().toISOString(),
+        type: 'info',
+        link: '/chat'
+      };
+      globalNotifications.push(notif);
+      io.to(receiverId.toString()).emit('receiveNotification', notif);
+      
     } catch (e) {
       console.error('Error saving message:', e);
     }
@@ -860,57 +874,7 @@ app.get('/api/notifications/:userId', (req, res) => {
   res.json(userNotifs);
 });
 
-const usersSocketMap = {};
 
-io.on('connection', (socket) => {
-  socket.on('join', (userId) => {
-    usersSocketMap[userId] = socket.id;
-    console.log(`User ${userId} joined with socket ${socket.id}`);
-  });
-
-  socket.on('sendMessage', async (data) => {
-    try {
-      // Simpan ke database
-      const msg = await prisma.message.create({
-        data: {
-          senderId: parseInt(data.senderId),
-          receiverId: parseInt(data.receiverId),
-          text: data.text
-        }
-      });
-      
-      // Kirim ke penerima jika sedang online
-      const receiverSocketId = usersSocketMap[data.receiverId];
-
-      const notif = {
-        id: Date.now(),
-        userId: data.receiverId,
-        title: 'Pesan Baru 💬',
-        message: data.text.length > 30 ? data.text.substring(0, 30) + '...' : data.text,
-        time: new Date().toISOString(),
-        type: 'info',
-        link: '/chat'
-      };
-      globalNotifications.push(notif);
-
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit('receiveMessage', msg);
-        io.to(receiverSocketId).emit('receiveNotification', notif);
-      }
-    } catch (err) {
-      console.error('Error saving message:', err);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    for (const [userId, socketId] of Object.entries(usersSocketMap)) {
-      if (socketId === socket.id) {
-        delete usersSocketMap[userId];
-        break;
-      }
-    }
-  });
-});
 
 // Start the server
 server.listen(PORT, () => {

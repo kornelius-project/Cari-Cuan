@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Clock, Lock, X, FileText, CheckCircle, Search, Filter, Briefcase, Bookmark, AlertCircle, ChevronDown, LogIn, Send, ShieldCheck, MessageSquare } from 'lucide-react';
+import { MapPin, Clock, Lock, X, FileText, CheckCircle, Search, Filter, Briefcase, Bookmark, AlertCircle, ChevronDown, LogIn, Send, ShieldCheck, MessageSquare, ArrowLeft } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -69,7 +69,7 @@ export default function CariLowongan() {
           umkm: job.umkm?.name || "UMKM",
           umkmId: job.umkm?.id,
           logoPerusahaan: job.imageUrl || "/freelance6.jpg",
-          kategori: "Kategori Lain",
+          kategori: job.category || "Desain Grafis",
           tipeKerja: job.type || "Proyek Lepas",
           lokasi: job.location || "Remote",
           waktuPost: "Baru saja",
@@ -216,6 +216,10 @@ export default function CariLowongan() {
                   <label className="flex items-center gap-3 cursor-pointer group">
                     <input type="checkbox" checked={filters.tipeKerja.includes('Part-Time')} onChange={() => handleTipeChange('Part-Time')} className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500" />
                     <span className="text-slate-600 group-hover:text-purple-600 transition text-xs font-medium">Part-Time (Durasi)</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" checked={filters.tipeKerja.includes('Sayembara')} onChange={() => handleTipeChange('Sayembara')} className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500" />
+                    <span className="text-slate-600 group-hover:text-purple-600 transition text-xs font-medium">Sayembara (Lomba)</span>
                   </label>
                 </div>
               </div>
@@ -382,7 +386,10 @@ export default function CariLowongan() {
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent"></div>
               
               <button 
-                onClick={() => setSelectedJob(null)} 
+                onClick={() => {
+                  setSelectedJob(null);
+                  setShowApplyModal(false);
+                }} 
                 className="absolute top-4 right-4 text-white hover:text-rose-400 bg-black/20 hover:bg-black/40 backdrop-blur-sm p-2 rounded-full transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -421,11 +428,10 @@ export default function CariLowongan() {
                   Lihat Status Lamaran
                 </button>
               </div>
-            ) : (
-              <>
-                <div className="p-6 md:p-8 overflow-y-auto bg-white flex-1">
-                  {/* Detail Info Bar */}
-                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex flex-wrap gap-x-8 gap-y-4 mb-6 relative overflow-hidden">
+            ) : !showApplyModal ? (
+              <div className="p-6 md:p-8 overflow-y-auto bg-white flex-1 flex flex-col">
+                {/* Detail Info Bar */}
+                <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 flex flex-wrap gap-x-8 gap-y-4 mb-6 relative overflow-hidden">
                     <div className={`absolute right-0 top-0 bottom-0 w-1 ${selectedJob.tipeKerja === 'Proyek Lepas' ? 'bg-slate-400' : 'bg-slate-800'}`}></div>
                     {/* (Tipe is removed since it's on banner) */}
                     <div>
@@ -472,10 +478,35 @@ export default function CariLowongan() {
                       ))}
                     </div>
                   </div>
+                  <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div className="text-center sm:text-left flex items-center gap-4">
+                      <div>
+                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Diiklankan oleh</p>
+                        <p className="text-slate-900 font-semibold text-sm">{selectedJob.umkm}</p>
+                      </div>
+                      {selectedJob.umkmId && (
+                        <Link to={`/chat?userId=${selectedJob.umkmId}`} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl transition font-bold text-xs border border-indigo-200 hover:border-indigo-600 shadow-sm" title="Tanya seputar pekerjaan ini">
+                          <MessageSquare className="w-4 h-4" />
+                          Tanya UMKM
+                        </Link>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => setShowApplyModal(true)}
+                      className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl shadow-md transition cursor-pointer"
+                    >
+                      Ajukan Lamaran
+                    </button>
+                  </div>
                 </div>
-                
-                {/* Inline Application Form */}
-                <div className="bg-slate-50 border-t border-slate-100 p-6 md:p-8">
+            ) : (
+                <div className="bg-slate-50 border-t border-slate-100 p-6 md:p-8 flex-1 flex flex-col h-full overflow-y-auto">
+                  <button 
+                    onClick={() => setShowApplyModal(false)}
+                    className="mb-6 text-sm text-indigo-600 font-bold flex items-center gap-1.5 hover:text-indigo-800 self-start transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4"/> Kembali ke Detail
+                  </button>
                   {isLoggedInState ? (
                     localStorage.getItem('userRole') === 'umkm' ? (
                       <div className="text-center py-6">
@@ -553,19 +584,7 @@ export default function CariLowongan() {
                         </>
                       )}
 
-                      <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-200">
-                        <div className="text-left flex gap-4 items-center">
-                          <div>
-                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Diiklankan oleh</p>
-                            <p className="text-slate-900 font-semibold text-sm">{selectedJob.umkm}</p>
-                          </div>
-                          {selectedJob.umkmId && (
-                            <Link to={`/chat?userId=${selectedJob.umkmId}`} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl transition font-bold text-xs border border-indigo-200 hover:border-indigo-600 shadow-sm" title="Tanya seputar pekerjaan ini">
-                              <MessageSquare className="w-4 h-4" />
-                              Tanya UMKM
-                            </Link>
-                          )}
-                        </div>
+                      <div className="flex justify-end items-center mt-auto pt-6 border-t border-slate-200">
                         <button 
                           onClick={async () => {
                             try {
@@ -608,11 +627,7 @@ export default function CariLowongan() {
                     </>
                     )
                   ) : (
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                      <div className="text-center sm:text-left">
-                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Diiklankan oleh</p>
-                        <p className="text-slate-900 font-semibold text-sm">{selectedJob.umkm}</p>
-                      </div>
+                    <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-auto">
                       <button 
                         onClick={() => setShowLoginModal(true)}
                         className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-6 rounded-lg transition flex items-center justify-center cursor-pointer text-sm"
@@ -622,7 +637,6 @@ export default function CariLowongan() {
                     </div>
                   )}
                 </div>
-              </>
             )}
 
           </div>

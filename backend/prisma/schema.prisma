@@ -43,6 +43,7 @@ model Job {
   salary      String?
   location    String?
   type        String?  // 'Part-time', 'Freelance', 'Full-time'
+  category    String?
   imageUrl    String?
   status      String   @default("open") // 'open', 'closed'
   createdAt   DateTime @default(now())
