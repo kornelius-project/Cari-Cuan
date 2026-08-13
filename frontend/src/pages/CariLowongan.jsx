@@ -17,7 +17,18 @@ export default function CariLowongan() {
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [kycVerified, setKycVerified] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [toastVisible, setToastVisible] = useState(false);
   const navigate = useNavigate();
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToastVisible(true), 10);
+    setTimeout(() => {
+      setToastVisible(false);
+      setTimeout(() => setToast(null), 300);
+    }, 4000);
+  };
 
   const handleInlineLogin = async (e) => {
     e.preventDefault();
@@ -41,10 +52,10 @@ export default function CariLowongan() {
         setShowLoginModal(false);
         window.dispatchEvent(new Event('storage'));
       } else {
-        alert(data.error || 'Login gagal');
+        showToast(data.error || 'Login gagal', 'error');
       }
     } catch (error) {
-      alert('Terjadi kesalahan pada server');
+      showToast('Terjadi kesalahan pada server', 'error');
     } finally {
       setIsLoggingIn(false);
     }
@@ -593,7 +604,7 @@ export default function CariLowongan() {
                               formData.append('mahasiswaId', localStorage.getItem('userId'));
 
                               if (selectedJob.tipeKerja === 'Sayembara') {
-                                if (!submissionFile) return alert('File karya wajib diunggah!');
+                                if (!submissionFile) return showToast('File karya wajib diunggah!', 'error');
                                 formData.append('file', submissionFile);
                               } else {
                                 formData.append('coverLetter', coverLetter);
@@ -613,10 +624,10 @@ export default function CariLowongan() {
                                 setCoverLetter('');
                                 setSubmissionFile(null);
                               } else {
-                                alert(data.error || 'Gagal mengirim lamaran');
+                                showToast(data.error || 'Gagal mengirim lamaran', 'error');
                               }
                             } catch (err) {
-                              alert('Terjadi kesalahan');
+                              showToast('Terjadi kesalahan', 'error');
                             }
                           }}
                           className={`px-6 py-2.5 rounded-lg text-white font-semibold text-sm transition flex items-center justify-center cursor-pointer ${selectedJob.tipeKerja === 'Sayembara' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700'}`}
@@ -748,7 +759,29 @@ export default function CariLowongan() {
       )}
 
 
-      
+      {/* TOAST */}
+      {toast && (
+        <div 
+          className={`fixed top-0 left-0 w-full z-[9999] transition-transform duration-300 ease-in-out ${
+            toastVisible ? 'translate-y-0' : '-translate-y-full'
+          }`}
+        >
+          <div className={`${toast.type === 'error' ? 'bg-rose-600' : 'bg-slate-900'} text-white px-4 py-3 shadow-md flex items-center justify-between`}>
+            <div className="flex items-center justify-center flex-1 gap-3">
+              {toast.type === 'error' ? (
+                <AlertCircle className="w-5 h-5 text-rose-200 flex-shrink-0" />
+              ) : (
+                <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+              )}
+              <p className="font-medium text-sm text-center">{toast.message}</p>
+            </div>
+            <button onClick={() => setToastVisible(false)} className="text-white/80 hover:text-white transition p-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

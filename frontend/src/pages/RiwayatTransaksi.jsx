@@ -13,6 +13,13 @@ export default function RiwayatTransaksi() {
   const [totalPengeluaran, setTotalPengeluaran] = useState(0);
   const [tertahanEscrow, setTertahanEscrow] = useState(0);
   const [danaDikembalikan, setDanaDikembalikan] = useState(0);
+  
+  // Mahasiswa metrics
+  const [totalPendapatan, setTotalPendapatan] = useState(0);
+  const [totalTarikTunai, setTotalTarikTunai] = useState(0);
+  const [saldoAktif, setSaldoAktif] = useState(0);
+
+  const role = localStorage.getItem('userRole') || 'umkm';
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -29,33 +36,47 @@ export default function RiwayatTransaksi() {
             id: t.id,
             tanggal: t.createdAt,
             keterangan: t.description,
-            jenis: (t.type === 'Topup' || t.type === 'Income') ? 'Masuk' : (t.type === 'Info' ? 'Info' : 'Keluar'),
+            jenis: (t.type === 'Topup' || t.type === 'Income' || t.type === 'Masuk') ? 'Masuk' : (t.type === 'Info' ? 'Info' : 'Keluar'),
             nominal: t.amount
           }));
           setTransactions(mappedTrx);
           
-          const totalOut = mappedTrx
-            .filter(t => t.jenis === 'Keluar')
-            .reduce((sum, t) => sum + t.nominal, 0);
+          if (role === 'umkm') {
+            const totalOut = mappedTrx
+              .filter(t => t.jenis === 'Keluar')
+              .reduce((sum, t) => sum + t.nominal, 0);
+              
+            const escrow = data.escrowAmount || 0;
+            setTertahanEscrow(escrow);
             
-          const escrow = data.escrowAmount || 0;
-          setTertahanEscrow(escrow);
-          
-          // Total Pengeluaran = Total Keluar (termasuk escrow aktif) - Escrow Aktif
-          // Sehingga hanya menampilkan pengeluaran yang sudah 'final' (Pajak + Escrow yang sudah cair)
-          setTotalPengeluaran(totalOut - escrow);
-          
-          const refund = mappedTrx
-            .filter(t => t.jenis === 'Masuk' && t.keterangan.includes('Pengembalian Dana Escrow'))
-            .reduce((sum, t) => sum + t.nominal, 0);
-          setDanaDikembalikan(refund);
+            // Total Pengeluaran = Total Keluar (termasuk escrow aktif) - Escrow Aktif
+            setTotalPengeluaran(totalOut - escrow);
+            
+            const refund = mappedTrx
+              .filter(t => t.jenis === 'Masuk' && t.keterangan.includes('Pengembalian Dana Escrow'))
+              .reduce((sum, t) => sum + t.nominal, 0);
+            setDanaDikembalikan(refund);
+          } else {
+            // Mahasiswa
+            const income = mappedTrx
+              .filter(t => t.jenis === 'Masuk')
+              .reduce((sum, t) => sum + t.nominal, 0);
+            setTotalPendapatan(income);
+
+            const withdrawal = mappedTrx
+              .filter(t => t.jenis === 'Keluar' && (t.keterangan.includes('Penarikan') || t.keterangan.includes('Pajak & Biaya Platform')))
+              .reduce((sum, t) => sum + t.nominal, 0);
+            setTotalTarikTunai(withdrawal);
+
+            setSaldoAktif(data.balance || 0);
+          }
         }
       } catch (e) {
         console.error(e);
       }
     };
     fetchWallet();
-  }, []);
+  }, [role]);
 
   const filteredData = filter === 'Semua' 
     ? transactions 
@@ -74,37 +95,71 @@ export default function RiwayatTransaksi() {
         </header>
 
         {/* METRICS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
-              <Receipt className="w-7 h-7 text-indigo-600" />
+        {role === 'umkm' ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
+                <Receipt className="w-7 h-7 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Pengeluaran</p>
+                <p className="text-2xl font-black text-slate-900">Rp {totalPengeluaran.toLocaleString('id-ID')}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Pengeluaran</p>
-              <p className="text-2xl font-black text-slate-900">Rp {totalPengeluaran.toLocaleString('id-ID')}</p>
+            
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
+                <Clock className="w-7 h-7 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Tertahan (Escrow)</p>
+                <p className="text-2xl font-black text-slate-900">Rp {tertahanEscrow.toLocaleString('id-ID')}</p>
+              </div>
             </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
-              <Clock className="w-7 h-7 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Tertahan (Escrow)</p>
-              <p className="text-2xl font-black text-slate-900">Rp {tertahanEscrow.toLocaleString('id-ID')}</p>
-            </div>
-          </div>
 
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
-              <ArrowDownRight className="w-7 h-7 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Dana Dikembalikan</p>
-              <p className="text-2xl font-black text-slate-900">Rp {danaDikembalikan.toLocaleString('id-ID')}</p>
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
+                <ArrowDownRight className="w-7 h-7 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Dana Dikembalikan</p>
+                <p className="text-2xl font-black text-slate-900">Rp {danaDikembalikan.toLocaleString('id-ID')}</p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
+                <ArrowDownRight className="w-7 h-7 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Pendapatan</p>
+                <p className="text-2xl font-black text-slate-900">Rp {totalPendapatan.toLocaleString('id-ID')}</p>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
+                <ArrowUpRight className="w-7 h-7 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Tarik Tunai</p>
+                <p className="text-2xl font-black text-slate-900">Rp {totalTarikTunai.toLocaleString('id-ID')}</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
+                <Receipt className="w-7 h-7 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Saldo Aktif</p>
+                <p className="text-2xl font-black text-slate-900">Rp {saldoAktif.toLocaleString('id-ID')}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* FILTER & SEARCH */}
         <div className="bg-white rounded-3xl p-2 sm:p-8 shadow-sm border border-slate-100">
@@ -156,8 +211,8 @@ export default function RiwayatTransaksi() {
                       </p>
                     </td>
                     <td className="px-6 py-5">
-                      <p className={`font-black ${trx.jenis === 'Masuk' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                        {trx.jenis === 'Masuk' ? '+' : ''} Rp {trx.nominal.toLocaleString('id-ID')}
+                      <p className={`font-black ${trx.jenis === 'Masuk' ? 'text-emerald-600' : (trx.jenis === 'Keluar' ? 'text-rose-600' : 'text-slate-900')}`}>
+                        {trx.jenis === 'Masuk' ? '+' : (trx.jenis === 'Keluar' ? '-' : '')} Rp {trx.nominal.toLocaleString('id-ID')}
                       </p>
                     </td>
                     <td className="px-6 py-5">

@@ -72,10 +72,12 @@ export default function DashboardUMKM() {
               tipeKerja: job.type || "Part-Time",
               kategori: job.category || "Desain Grafis",
               waktu: new Date(job.createdAt).toLocaleDateString('id-ID'),
-              status: job.status === 'open' ? 'Mencari Kandidat' : 'Selesai',
+              status: job.status === 'open' ? 'Mencari Kandidat' : 'Ditutup',
+              rawStatus: job.status,
+              isActive: job.isActive !== false,
               budget: parseInt(job.salary?.replace(/\D/g, '')) || 0,
               isApproved: job.status === 'closed',
-              kandidatCount: job.applications?.length || 0,
+              kandidatCount: job.applications?.filter(a => a.status === 'MENUNGGU').length || 0,
               applications: job.applications || [],
               deskripsi: job.description,
               gambar: job.imageUrl
@@ -172,7 +174,8 @@ export default function DashboardUMKM() {
           tipeKerja: newJob.type,
           kategori: newJob.category || formData.kategori,
           waktu: new Date(newJob.createdAt).toLocaleDateString('id-ID'),
-          status: newJob.status === 'open' ? 'Mencari Kandidat' : 'Selesai',
+          status: newJob.status === 'open' ? 'Mencari Kandidat' : 'Ditutup',
+          rawStatus: newJob.status,
           budget: cost,
           isApproved: false,
           kandidatCount: 0,
@@ -219,7 +222,8 @@ export default function DashboardUMKM() {
           salary: `Rp ${cost.toLocaleString('id-ID')}`,
           location: 'Remote',
           type: editFormData.tipeKerja,
-          category: editFormData.kategori
+          category: editFormData.kategori,
+          status: editFormData.status
         })
       });
 
@@ -232,7 +236,10 @@ export default function DashboardUMKM() {
             tipeKerja: updatedJob.type,
             kategori: updatedJob.category || editFormData.kategori,
             budget: cost,
-            deskripsi: updatedJob.description
+            deskripsi: updatedJob.description,
+            rawStatus: updatedJob.status,
+            status: updatedJob.status === 'open' ? 'Mencari Kandidat' : 'Ditutup',
+            isApproved: updatedJob.status === 'closed'
           } : p
         ));
         showToast("Perubahan berhasil disimpan!");
@@ -266,6 +273,45 @@ export default function DashboardUMKM() {
     } catch (err) {
       console.error(err);
       showToast("Terjadi kesalahan koneksi.", "error");
+    }
+  };
+
+  const handleUpdateProyek = async (id, updateData) => {
+    try {
+      const token = localStorage.getItem('token');
+      // fetch current job info first so we don't overwrite everything else with null since the PUT route expects full data for now
+      // Actually PUT route in backend might overwrite if we don't provide all fields.
+      // Wait! In index.js, `data: { title, description, salary, location, type, category, status, isActive }`
+      // If we only send `{ isActive: false }`, title, description etc will become undefined and might not be updated (Prisma ignores undefined), BUT in JS we sent JSON, so missing fields might be undefined. Let's check Prisma docs. Prisma `undefined` ignores the field, while `null` sets it to null. `req.body.title` is `undefined` if missing. So the backend is safe.
+      const response = await fetch(`http://localhost:5000/api/jobs/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (response.ok) {
+        const updatedJob = await response.json();
+        setProyekAktif(daftarProyekUMKM.map(p => {
+          if (p.id === id) {
+            return {
+              ...p,
+              rawStatus: updatedJob.status,
+              status: updatedJob.status === 'open' ? 'Mencari Kandidat' : 'Ditutup',
+              isActive: updatedJob.isActive !== false,
+            };
+          }
+          return p;
+        }));
+        showToast("Status berhasil diperbarui!");
+      } else {
+        showToast("Gagal memperbarui status", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Terjadi kesalahan server", "error");
     }
   };
 
@@ -310,6 +356,40 @@ export default function DashboardUMKM() {
     }
   };
 
+  const handleTolakKandidat = async (appId, projectId, pelamarName) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/applications/${appId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'REJECTED' })
+      });
+      
+      if (response.ok) {
+        setProyekAktif(prev => prev.map(p => {
+          if (p.id === projectId) {
+            return {
+              ...p,
+              applications: p.applications.map(a => 
+                a.id === appId ? { ...a, status: 'REJECTED' } : a
+              )
+            };
+          }
+          return p;
+        }));
+        showToast(`Lamaran dari ${pelamarName} berhasil ditolak.`, "success");
+      } else {
+        showToast("Gagal menolak kandidat", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Terjadi kesalahan server", "error");
+    }
+  };
+
   const handleDownload = async (url) => {
     try {
       const response = await fetch(url);
@@ -330,7 +410,7 @@ export default function DashboardUMKM() {
   };
 
   // --- CALCULATIONS ---
-  const activeProjects = (daftarProyekUMKM || []).filter(p => !p?.isApproved).length;
+  const activeProjects = (daftarProyekUMKM || []).filter(p => p?.isActive).length;
   const totalKandidat = (daftarProyekUMKM || []).reduce((acc, p) => p?.isApproved ? acc : acc + (p?.kandidatCount || 0), 0);
 
   // --- STATE MODALS & UI ---
@@ -365,69 +445,7 @@ export default function DashboardUMKM() {
   const [selectedReviewId, setSelectedReviewId] = useState(null);
   const [filterTipe, setFilterTipe] = useState('semua');
   const [editingProject, setEditingProject] = useState(null);
-  const [editFormData, setEditFormData] = useState({ judul: '', kategori: 'Desain Grafis', tipeKerja: '', budget: '', deskripsi: '' });
-
-  // RATING MODAL STATE
-  const [ratingModal, setRatingModal] = useState({
-    isOpen: false,
-    appId: null,
-    mahasiswaId: null,
-    projectId: null,
-    amount: 0,
-    jobTitle: '',
-    jobType: '',
-    rating: 5
-  });
-
-  const openRatingModal = (appId, mahasiswaId, projectId, amount, jobTitle, jobType) => {
-    setRatingModal({
-      isOpen: true,
-      appId, mahasiswaId, projectId, amount, jobTitle, jobType, rating: 5
-    });
-  };
-
-  const handleCompleteAndRate = async () => {
-    try {
-      const { appId, projectId, amount, rating } = ratingModal;
-      const token = localStorage.getItem('token');
-      
-      // 1. Call Complete/Rate endpoint
-      const response = await fetch(`http://localhost:5000/api/applications/${appId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ rating, amount })
-      });
-      
-      if (response.ok) {
-        fetchWallet();
-        setProyekAktif(prev => prev.map(p => {
-          if (p.id === projectId) {
-            return {
-              ...p,
-              status: 'Selesai',
-              isApproved: true,
-              applications: p.applications.map(a => 
-                a.id === appId ? { ...a, status: 'APPROVED' } : { ...a, status: 'REJECTED' }
-              )
-            };
-          }
-          return p;
-        }));
-        showToast(`Berhasil! Rating terkirim dan Rp ${amount.toLocaleString('id-ID')} dicairkan.`);
-        setRatingModal(prev => ({ ...prev, isOpen: false }));
-        setSelectedReviewId(null);
-        setSelectedApplicantsId(null);
-      } else {
-        showToast("Gagal menyelesaikan pekerjaan", "error");
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("Terjadi kesalahan server", "error");
-    }
-  };
+  const [editFormData, setEditFormData] = useState({ judul: '', kategori: 'Desain Grafis', tipeKerja: '', budget: '', deskripsi: '', status: 'open' });
 
   // --- DYNAMIC APPLICANTS DATA ---
   let currentApplicants = [];
@@ -802,42 +820,45 @@ export default function DashboardUMKM() {
                     
                     {/* Right Info & Actions */}
                     <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-6 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-200/60">
-                      <div className="text-left md:text-right">
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Status Pekerjaan</span>
-                        <span className="block text-xs font-extrabold text-slate-800">{proyek.status}</span>
+                      <div className="text-left md:text-right flex gap-3">
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Status Proyek</span>
+                          <select 
+                            value={proyek.isActive ? "aktif" : "selesai"} 
+                            onChange={(e) => handleUpdateProyek(proyek.id, { isActive: e.target.value === "aktif", status: e.target.value === "aktif" ? proyek.rawStatus : 'closed' })}
+                            className={`mt-1 text-xs font-extrabold rounded-md px-2 py-1 outline-none border cursor-pointer ${proyek.isActive ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-600 border-slate-300'}`}
+                          >
+                            <option value="aktif">Aktif</option>
+                            <option value="selesai">Selesai</option>
+                          </select>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Pencarian Kandidat</span>
+                          <select 
+                            value={proyek.rawStatus} 
+                            onChange={(e) => handleUpdateProyek(proyek.id, { status: e.target.value })}
+                            disabled={!proyek.isActive}
+                            className={`mt-1 text-xs font-extrabold rounded-md px-2 py-1 outline-none border ${!proyek.isActive ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : (proyek.rawStatus === 'open' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 cursor-pointer' : 'bg-rose-50 text-rose-700 border-rose-200 cursor-pointer')}`}
+                          >
+                            <option value="open">Mencari</option>
+                            <option value="closed">Berhenti</option>
+                          </select>
+                        </div>
                       </div>
                       
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
-                        {proyek.isApproved ? (
-                          <button className="px-6 py-3 bg-slate-200 text-slate-500 font-extrabold rounded-2xl text-xs cursor-not-allowed">
-                            ✓ Proyek Selesai
-                          </button>
-                        ) : isSayembara ? (
                           <button 
-                            onClick={() => setSelectedReviewId(proyek.id)}
-                            className="px-6 py-3 bg-slate-900 hover:bg-slate-950 text-white font-extrabold rounded-2xl transition shadow-md flex items-center gap-2 text-xs cursor-pointer relative"
+                            onClick={() => navigate(`/detail-proyek/${proyek.id}`)}
+                            className={`px-6 py-3 text-white font-extrabold rounded-2xl transition shadow-md flex items-center gap-2 text-xs cursor-pointer relative ${isSayembara ? 'bg-slate-900 hover:bg-slate-950' : 'bg-indigo-600 hover:bg-indigo-700'}`}
                           >
-                            Cek Karya Mahasiswa
+                            Detail Proyek
                             {proyek.kandidatCount > 0 && (
                               <span className="w-5 h-5 bg-rose-500 text-white flex justify-center items-center rounded-full text-[10px] font-black shadow-sm ring-2 ring-white">
                                 {proyek.kandidatCount}
                               </span>
                             )}
                           </button>
-                        ) : (
-                          <button 
-                            onClick={() => setSelectedApplicantsId(proyek.id)}
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-2xl transition shadow-md flex items-center gap-2 text-xs cursor-pointer relative"
-                          >
-                            Lihat Pelamar
-                            {proyek.kandidatCount > 0 && (
-                              <span className="w-5 h-5 bg-rose-500 text-white flex justify-center items-center rounded-full text-[10px] font-black shadow-sm ring-2 ring-white">
-                                {proyek.kandidatCount}
-                              </span>
-                            )}
-                          </button>
-                        )}
                         <button 
                           onClick={() => {
                             setEditingProject(proyek.id);
@@ -846,7 +867,8 @@ export default function DashboardUMKM() {
                               kategori: proyek.kategori || 'Desain Grafis',
                               tipeKerja: proyek.tipeKerja,
                               budget: proyek.budget,
-                              deskripsi: proyek.deskripsi || '' // Note: we need deskripsi from API
+                              deskripsi: proyek.deskripsi || '', // Note: we need deskripsi from API
+                              status: proyek.rawStatus || 'open'
                             });
                           }}
                           className="p-3 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-indigo-600 rounded-2xl transition cursor-pointer"
@@ -1116,7 +1138,7 @@ export default function DashboardUMKM() {
                         {!p?.isApproved ? (
                           <button 
                             onClick={() => {
-                                openRatingModal(app.id, app.mahasiswa.id, p.id, p.budget, p.judul, p.tipeKerja);
+                                handleTerimaKandidat(app.id, p.id, app.mahasiswa.nama);
                               }}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl transition flex justify-center items-center text-sm shadow-md cursor-pointer"
                           >
@@ -1147,48 +1169,7 @@ export default function DashboardUMKM() {
         );
       })()}
 
-      {/* --- MODAL RATING & SELESAI --- */}
-      {ratingModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/70 z-50 flex justify-center items-center p-4 backdrop-blur-sm animate-in zoom-in-95 duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900">Beri Penilaian</h2>
-                <p className="text-xs text-slate-500 mt-1">Selesaikan pekerjaan dan cairkan dana.</p>
-              </div>
-              <button onClick={() => setRatingModal(prev => ({ ...prev, isOpen: false }))} className="w-8 h-8 bg-white border border-slate-200 hover:bg-slate-100 rounded-full flex justify-center items-center cursor-pointer">
-                <X className="w-4 h-4 text-slate-600" />
-              </button>
-            </div>
-            <div className="p-6 text-center space-y-4">
-              <p className="text-sm font-medium text-slate-600">
-                Seberapa puas Anda dengan hasil kerja di proyek <span className="font-bold text-slate-900">{ratingModal.jobTitle}</span>?
-              </p>
-              
-              <div className="flex justify-center gap-2 my-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRatingModal(prev => ({ ...prev, rating: star }))}
-                    className="transition transform hover:scale-110 focus:outline-none"
-                  >
-                    <Star className={`w-10 h-10 ${ratingModal.rating >= star ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-slate-400">Pemberian rating akan menambah XP pada profil Mahasiswa.</p>
 
-              <button
-                onClick={handleCompleteAndRate}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-xl transition shadow-md mt-4 cursor-pointer"
-              >
-                Konfirmasi & Cairkan Dana
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* --- MODAL POSTING PROYEK BARU (PREMIUM SPLIT LAYOUT) --- */}
       {showPostingForm && (
@@ -1430,7 +1411,18 @@ export default function DashboardUMKM() {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Status Pekerjaan <span className="text-rose-500">*</span></label>
+                    <select 
+                      value={editFormData.status}
+                      onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
+                      className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-200 transition text-sm font-bold text-slate-800"
+                    >
+                      <option value="open">Mencari Kandidat (Buka)</option>
+                      <option value="closed">Berhenti Mencari (Tutup)</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Budget (Rp) <span className="text-rose-500">*</span></label>
                     <input 

@@ -167,7 +167,7 @@ app.get('/api/wallet', authenticateToken, async (req, res) => {
       }
     });
 
-    res.json({ balance: user.balance, transactions, escrowAmount });
+    res.json({ balance: user.balance, frozenBalance: user.frozenBalance, transactions, escrowAmount });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -253,10 +253,38 @@ app.post('/api/wallet/withdraw', authenticateToken, async (req, res) => {
 app.get('/api/jobs', async (req, res) => {
   try {
     const jobs = await prisma.job.findMany({
+      where: {
+        status: 'open',
+        isActive: true
+      },
       include: { umkm: { select: { name: true, id: true } } },
       orderBy: { createdAt: 'desc' }
     });
     res.json(jobs);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get a single job by ID
+app.get('/api/jobs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const job = await prisma.job.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        umkm: { select: { name: true, id: true } },
+        applications: {
+          include: {
+            mahasiswa: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
+    });
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    res.json(job);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -401,7 +429,7 @@ app.get('/api/jobs/umkm/:umkmId', authenticateToken, async (req, res) => {
 app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { title, description, salary, location, type, category } = req.body;
+    const { title, description, salary, location, type, category, status, isActive } = req.body;
     
     const jobCheck = await prisma.job.findUnique({ where: { id } });
     if (!jobCheck) return res.status(404).json({ error: 'Job not found' });
@@ -409,7 +437,7 @@ app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
 
     const job = await prisma.job.update({
       where: { id },
-      data: { title, description, salary, location, type, category }
+      data: { title, description, salary, location, type, category, status, isActive }
     });
     res.json(job);
   } catch (error) {
@@ -443,7 +471,7 @@ app.post('/api/applications', authenticateToken, upload.single('file'), async (r
     });
 
     if (existing) {
-      return res.status(400).json({ error: 'Already applied' });
+      return res.status(400).json({ error: 'Anda Sudah Mendaftar sebelumnya' });
     }
 
     const application = await prisma.application.create({
@@ -510,17 +538,30 @@ app.put('/api/applications/:id/approve', authenticateToken, async (req, res) => 
       })
     ];
 
-    // If Sayembara, process payment
-    if (jobType === 'Sayembara') {
-      const amount = parseFloat(req.body.amount) || parseFloat(application.job.salary?.replace(/\D/g,'')) || 0;
+    const amount = parseFloat(req.body.amount) || parseFloat(application.job.salary?.replace(/\D/g,'')) || 0;
+
+    if (jobType !== 'Sayembara') {
+      const umkm = await prisma.user.findUnique({ where: { id: umkmId } });
+      if (umkm.balance < amount) {
+        return res.status(400).json({ error: `Saldo Anda tidak mencukupi untuk menerima kandidat ini. Dibutuhkan: Rp ${amount.toLocaleString('id-ID')}` });
+      }
       
-      // NOTE: We DO NOT decrement UMKM balance here because it was already deducted at posting time (Escrow).
-      // We only increment Mahasiswa's balance to release the funds from Escrow.
       transactions.push(
         prisma.user.update({
-          where: { id: application.mahasiswaId },
-          data: { balance: { increment: amount } }
+          where: { id: umkmId },
+          data: { balance: { decrement: amount } }
         }),
+        prisma.transaction.create({
+          data: {
+            userId: umkmId,
+            amount: amount,
+            type: 'Keluar',
+            description: `Anggaran ditahan ke Escrow (Penerimaan Kandidat Proyek: ${application.job.title})`
+          }
+        })
+      );
+    } else {
+      transactions.push(
         prisma.transaction.create({
           data: {
             userId: umkmId,
@@ -528,17 +569,25 @@ app.put('/api/applications/:id/approve', authenticateToken, async (req, res) => 
             type: 'Info',
             description: `Dana Escrow diteruskan ke Mahasiswa: ${application.job.title}`
           }
-        }),
-        prisma.transaction.create({
-          data: {
-            userId: application.mahasiswaId,
-            amount: amount,
-            type: 'Masuk',
-            description: `Karya Terpilih: ${application.job.title}`
-          }
         })
       );
     }
+
+    // Mahasiswa mendapatkan uang yang dibekukan
+    transactions.push(
+      prisma.user.update({
+        where: { id: application.mahasiswaId },
+        data: { frozenBalance: { increment: amount } }
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: application.mahasiswaId,
+          amount: amount,
+          type: 'Masuk',
+          description: `Dana Proyek Dibekukan: ${application.job.title}`
+        }
+      })
+    );
 
     await prisma.$transaction(transactions);
 
@@ -554,11 +603,8 @@ app.put('/api/applications/:id/approve', authenticateToken, async (req, res) => 
     };
     globalNotifications.push(notif);
 
-    // Kirim notifikasi via socket jika mahasiswa online
-    if (usersSocketMap && usersSocketMap[application.mahasiswaId]) {
-      const mSocketId = usersSocketMap[application.mahasiswaId];
-      io.to(mSocketId).emit('receiveNotification', notif);
-    }
+    // Kirim notifikasi via socket
+    io.to(application.mahasiswaId.toString()).emit('receiveNotification', notif);
 
     res.json({ success: true, message: 'Application approved successfully' });
   } catch (error) {
@@ -591,7 +637,8 @@ app.put('/api/applications/:id', authenticateToken, async (req, res) => {
 app.post('/api/applications/:id/complete', authenticateToken, async (req, res) => {
   try {
     const applicationId = parseInt(req.params.id);
-    const { rating } = req.body; // rating from 1 to 5
+    const { rating, tip } = req.body; // rating from 1 to 5, optional tip
+    const tipAmount = parseFloat(tip) || 0;
 
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
@@ -604,6 +651,17 @@ app.post('/api/applications/:id/complete', authenticateToken, async (req, res) =
 
     if (application.job.umkmId !== req.user.id) {
       return res.status(403).json({ error: 'Only the job owner can complete this application' });
+    }
+
+    const umkm = await prisma.user.findUnique({ where: { id: req.user.id } });
+    
+    // Determine the base salary amount to be paid
+    const baseAmount = parseFloat(application.job.salary?.replace(/\D/g,'')) || 0;
+    const totalToMahasiswa = baseAmount + tipAmount;
+    const umkmTipDeduction = tipAmount;
+
+    if (umkmTipDeduction > 0 && umkm.balance < umkmTipDeduction) {
+      return res.status(400).json({ error: 'Saldo Anda tidak mencukupi untuk menyelesaikan pekerjaan ini (termasuk tip)' });
     }
 
     const mahasiswa = await prisma.user.findUnique({ where: { id: application.mahasiswaId } });
@@ -619,49 +677,85 @@ app.post('/api/applications/:id/complete', authenticateToken, async (req, res) =
         where: { id: applicationId },
         data: { status: 'SELESAI' }
       }),
-      prisma.user.update({
-        where: { id: application.mahasiswaId },
-        data: { 
-          xp: { increment: xpEarned },
-          rating: newRating,
-          ratingCount: newRatingCount,
-          completedProjects: { increment: 1 }
-        }
-      }),
       prisma.job.update({
         where: { id: application.job.id },
         data: { status: 'closed' }
       })
     ];
 
-    // Cairkan dana dari Escrow (salary) ke mahasiswa
-    const amount = parseFloat(application.job.salary?.replace(/\D/g,'')) || 0;
+    // Cairkan dana (salary) ke mahasiswa
+    // Update Mahasiswa
     transactions.push(
       prisma.user.update({
         where: { id: application.mahasiswaId },
-        data: { balance: { increment: amount } }
-      }),
-      prisma.transaction.create({
-        data: {
-          userId: application.job.umkmId,
-          amount: 0,
-          type: 'Info',
-          description: `Dana Escrow diteruskan ke Mahasiswa: ${application.job.title}`
-        }
-      }),
-      prisma.transaction.create({
-        data: {
-          userId: application.mahasiswaId,
-          amount: amount,
-          type: 'Masuk',
-          description: `Honor Pekerjaan Selesai: ${application.job.title}`
+        data: { 
+          xp: { increment: xpEarned },
+          rating: newRating,
+          ratingCount: newRatingCount,
+          completedProjects: { increment: 1 },
+          balance: { increment: totalToMahasiswa },
+          frozenBalance: { decrement: baseAmount }
         }
       })
     );
 
+    // Update UMKM
+    if (umkmTipDeduction > 0) {
+      transactions.push(
+        prisma.user.update({
+          where: { id: req.user.id },
+          data: { balance: { decrement: umkmTipDeduction } }
+        })
+      );
+    }
+
+    // Transactions untuk Honor
+    if (baseAmount > 0) {
+      transactions.push(
+        prisma.transaction.create({
+          data: {
+            userId: application.mahasiswaId,
+            amount: baseAmount,
+            type: 'Masuk',
+            description: `Pencairan Honor Pekerjaan Selesai: ${application.job.title}`
+          }
+        }),
+        prisma.transaction.create({
+          data: {
+            userId: application.job.umkmId,
+            amount: 0,
+            type: 'Info',
+            description: `Pekerjaan selesai, dana Escrow diteruskan ke pekerja: ${application.job.title}`
+          }
+        })
+      );
+    }
+
+    // Transactions untuk Tip
+    if (tipAmount > 0) {
+      transactions.push(
+        prisma.transaction.create({
+          data: {
+            userId: application.job.umkmId,
+            amount: tipAmount,
+            type: 'Keluar',
+            description: `Memberikan Tip/Bonus ke Pekerja: ${application.job.title}`
+          }
+        }),
+        prisma.transaction.create({
+          data: {
+            userId: application.mahasiswaId,
+            amount: tipAmount,
+            type: 'Masuk',
+            description: `Mendapatkan Tip/Bonus Pekerjaan: ${application.job.title}`
+          }
+        })
+      );
+    }
+
     await prisma.$transaction(transactions);
 
-    res.json({ success: true, message: 'Job completed, XP and rating added.' });
+    res.json({ success: true, message: 'Job completed, funds released, XP and rating added.' });
   } catch (error) {
     console.error('Error completing job:', error);
     res.status(500).json({ error: 'Internal server error' });

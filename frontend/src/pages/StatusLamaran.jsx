@@ -15,7 +15,12 @@ export default function StatusLamaran() {
       try {
         const userId = localStorage.getItem('userId');
         if (!userId) return;
-        const response = await fetch(`http://localhost:5000/api/applications/mahasiswa/${userId}`);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:5000/api/applications/mahasiswa/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           const mappedData = data.map(app => {

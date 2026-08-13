@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import DashboardMahasiswa from './pages/DashboardMahasiswa';
 import DashboardUMKM from './pages/DashboardUMKM';
+import DetailProyekUMKM from './pages/DetailProyekUMKM';
 import ProfilMahasiswa from './pages/ProfilMahasiswa';
 import CariLowongan from './pages/CariLowongan';
 import StatusLamaran from './pages/StatusLamaran';
@@ -29,6 +30,7 @@ function App() {
         <Route path="/lowongan" element={<CariLowongan />} />
         <Route path="/dashboard" element={<DashboardMahasiswa />} />
         <Route path="/dashboard-umkm" element={<DashboardUMKM />} />
+        <Route path="/detail-proyek/:id" element={<DetailProyekUMKM />} />
         <Route path="/status-lamaran" element={<StatusLamaran />} />
         <Route path="/kyc" element={<KycVerification />} />
         <Route path="/profil" element={<ProfilMahasiswa />} />

@@ -13,6 +13,7 @@ export default function DashboardMahasiswa() {
   const [userId] = useState(() => localStorage.getItem('userId') || '');
   
   const [saldo, setSaldo] = useState(0);
+  const [frozenBalance, setFrozenBalance] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [withdrawStep, setWithdrawStep] = useState(1);
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -20,6 +21,7 @@ export default function DashboardMahasiswa() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [filterTrx, setFilterTrx] = useState('semua');
   const [riwayatData, setRiwayatData] = useState([]);
+  const [totalPendapatan, setTotalPendapatan] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
 
   const fetchWallet = async () => {
@@ -31,8 +33,23 @@ export default function DashboardMahasiswa() {
       });
       if (response.ok) {
         const data = await response.json();
-        setSaldo(data.balance);
-        setRiwayatData(data.transactions);
+        setSaldo(data.balance || 0);
+        setFrozenBalance(data.frozenBalance || 0);
+        const mappedTransactions = (data.transactions || []).map(t => ({
+          id: t.id,
+          jenis: (t.type === 'Topup' || t.type === 'Income' || t.type === 'Masuk') ? 'Masuk' : (t.type === 'Info' ? 'Info' : 'Keluar'),
+          judul: t.description,
+          tanggal: new Date(t.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }),
+          nominal: `Rp ${t.amount.toLocaleString('id-ID')}`,
+          status: 'Selesai'
+        }));
+        
+        const income = mappedTransactions
+          .filter(t => t.jenis === 'Masuk')
+          .reduce((sum, t) => sum + (data.transactions.find(x => x.id === t.id)?.amount || 0), 0);
+        setTotalPendapatan(income);
+        
+        setRiwayatData(mappedTransactions);
       }
     } catch (e) {
       console.error(e);
@@ -251,8 +268,8 @@ export default function DashboardMahasiswa() {
               <div className="flex justify-between items-center mb-1">
                 <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Pendapatan</span>
               </div>
-              <p className="text-3xl font-black text-slate-900 mb-1">Rp 0</p>
-              <p className="text-xs text-slate-400 font-medium">Akumulasi dari seluruh proyek selesai.</p>
+              <p className="text-3xl font-black text-slate-900 mb-1">Rp {totalPendapatan.toLocaleString('id-ID')}</p>
+              <p className="text-xs text-slate-400 font-medium">Akumulasi dari seluruh proyek.</p>
             </div>
           </div>
         </div>
@@ -352,7 +369,7 @@ export default function DashboardMahasiswa() {
               </p>
               <div className="bg-white/60 p-3 rounded-xl border border-white">
                 <span className="text-xs font-bold text-slate-500 block mb-1">Total Dana Tertahan Saat Ini:</span>
-                <span className="text-lg font-black text-slate-900">Rp 0</span>
+                <span className="text-lg font-black text-slate-900">Rp {frozenBalance.toLocaleString('id-ID')}</span>
               </div>
             </div>
 

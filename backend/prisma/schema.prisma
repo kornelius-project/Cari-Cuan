@@ -14,6 +14,7 @@ model User {
   name      String
   role      String   // 'mahasiswa' or 'umkm'
   balance   Float    @default(0)
+  frozenBalance Float @default(0)
   kycStatus String   @default("UNVERIFIED") // 'UNVERIFIED', 'PENDING', 'VERIFIED'
   ktpImageUrl String?
   
@@ -45,7 +46,8 @@ model Job {
   type        String?  // 'Part-time', 'Freelance', 'Full-time'
   category    String?
   imageUrl    String?
-  status      String   @default("open") // 'open', 'closed'
+  status      String   @default("open") // 'open', 'closed' for candidate search
+  isActive    Boolean  @default(true)   // true = active, false = completed/closed
   createdAt   DateTime @default(now())
 
   // Relations
@@ -54,9 +56,16 @@ model Job {
   applications Application[]
 }
 
+enum AppStatus {
+  MENUNGGU
+  APPROVED
+  REJECTED
+  SELESAI
+}
+
 model Application {
   id            Int      @id @default(autoincrement())
-  status        String   @default("menunggu") // 'menunggu', 'diterima', 'ditolak'
+  status        AppStatus @default(MENUNGGU)
   submissionUrl String?  // Untuk tipe kerja Sayembara (Link ke karya yang diberi watermark)
   coverLetter   String?  // Untuk tipe kerja Part-Time
   createdAt     DateTime @default(now())
