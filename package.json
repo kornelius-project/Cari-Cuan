@@ -1,0 +1,11 @@
+{
+  "name": "caricuan-backend",
+  "version": "1.0.0",
+  "description": "Root package for Glitch deployment",
+  "scripts": {
+    "start": "cd backend && npm install && npx prisma db push && node index.js"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
