@@ -31,7 +31,7 @@ export default function DashboardUMKM() {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const response = await fetch('http://localhost:5000/api/wallet', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/wallet`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -61,12 +61,22 @@ export default function DashboardUMKM() {
       const userId = localStorage.getItem('userId');
       const token = localStorage.getItem('token');
       if (userId && token) {
-        fetch(`http://localhost:5000/api/jobs/umkm/${userId}`, {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs/umkm/${userId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
           .then(res => res.json())
           .then(data => {
-            const mappedJobs = data.map(job => ({
+            const categoryImages = {
+          'F&B': 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800',
+          'Digital Marketing': 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&q=80&w=800',
+          'Desain Grafis': 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80&w=800',
+          'Administrasi': 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=800',
+          'Pendidikan': 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800',
+          'Jasa': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800',
+          'IT / Web': 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+          'Fotografi': 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800',
+        };
+        const mappedJobs = data.map(job => ({
               id: job.id,
               judul: job.title,
               tipeKerja: job.type || "Part-Time",
@@ -80,7 +90,7 @@ export default function DashboardUMKM() {
               kandidatCount: job.applications?.filter(a => a.status === 'MENUNGGU').length || 0,
               applications: job.applications || [],
               deskripsi: job.description,
-              gambar: job.imageUrl
+              gambar: job.imageUrl || categoryImages[job.category] || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&q=80&w=800"
             }));
             setProyekAktif(mappedJobs);
           })
@@ -105,7 +115,7 @@ export default function DashboardUMKM() {
     try {
       const token = localStorage.getItem('token');
       
-      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs/${jobId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -145,7 +155,7 @@ export default function DashboardUMKM() {
     try {
       const userId = parseInt(localStorage.getItem('userId'));
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/jobs', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -210,7 +220,7 @@ export default function DashboardUMKM() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/jobs/${editingProject}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs/${editingProject}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -258,7 +268,7 @@ export default function DashboardUMKM() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/jobs/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -283,7 +293,7 @@ export default function DashboardUMKM() {
       // Actually PUT route in backend might overwrite if we don't provide all fields.
       // Wait! In index.js, `data: { title, description, salary, location, type, category, status, isActive }`
       // If we only send `{ isActive: false }`, title, description etc will become undefined and might not be updated (Prisma ignores undefined), BUT in JS we sent JSON, so missing fields might be undefined. Let's check Prisma docs. Prisma `undefined` ignores the field, while `null` sets it to null. `req.body.title` is `undefined` if missing. So the backend is safe.
-      const response = await fetch(`http://localhost:5000/api/jobs/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -318,7 +328,7 @@ export default function DashboardUMKM() {
   const handleTerimaKandidat = async (appId, projectId, pelamarName) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/applications/${appId}/approve`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/applications/${appId}/approve`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -359,7 +369,7 @@ export default function DashboardUMKM() {
   const handleTolakKandidat = async (appId, projectId, pelamarName) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/applications/${appId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/applications/${appId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -427,7 +437,7 @@ export default function DashboardUMKM() {
     const fetchCandidatePortfolio = async () => {
       if (activeApplicantId) {
         try {
-          const response = await fetch(`http://localhost:5000/api/portfolios/${activeApplicantId}`);
+          const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/portfolios/${activeApplicantId}`);
           if (response.ok) {
             const data = await response.json();
             setCandidatePortfolio(data);
@@ -505,7 +515,7 @@ export default function DashboardUMKM() {
     setIsProcessingTopUp(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/wallet/topup', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/wallet/topup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

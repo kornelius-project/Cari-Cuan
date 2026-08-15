@@ -16,7 +16,7 @@ export default function StatusLamaran() {
         const userId = localStorage.getItem('userId');
         if (!userId) return;
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/applications/mahasiswa/${userId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/applications/mahasiswa/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

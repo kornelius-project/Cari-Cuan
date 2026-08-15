@@ -20,7 +20,7 @@ export default function DetailProyekUMKM() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/jobs/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -47,7 +47,7 @@ export default function DetailProyekUMKM() {
   const handleTerimaKandidat = async (appId, pelamarName) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/applications/${appId}/approve`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/applications/${appId}/approve`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ export default function DetailProyekUMKM() {
   const handleTolakKandidat = async (appId, pelamarName) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/applications/${appId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/applications/${appId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ export default function DetailProyekUMKM() {
     try {
       setIsCompleting(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/applications/${completeModal.appId}/complete`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/applications/${completeModal.appId}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -211,8 +211,21 @@ export default function DetailProyekUMKM() {
         
         {/* Proyek Header */}
         <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-6 items-start md:items-center">
-          {job.imageUrl ? (
-            <img src={job.imageUrl} alt={job.title} className="w-24 h-24 rounded-2xl object-cover border border-slate-200 shrink-0" />
+          {job.imageUrl || job.category ? (
+            <img 
+              src={job.imageUrl || {
+                'F&B': 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800',
+                'Digital Marketing': 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&q=80&w=800',
+                'Desain Grafis': 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80&w=800',
+                'Administrasi': 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=800',
+                'Pendidikan': 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800',
+                'Jasa': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800',
+                'IT / Web': 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+                'Fotografi': 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800',
+              }[job.category] || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&q=80&w=800"} 
+              alt={job.title} 
+              className="w-24 h-24 rounded-2xl object-cover border border-slate-200 shrink-0" 
+            />
           ) : (
             <div className="w-24 h-24 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
               <Briefcase className="w-10 h-10" />

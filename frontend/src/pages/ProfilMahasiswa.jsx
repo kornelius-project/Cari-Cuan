@@ -53,7 +53,7 @@ export default function ProfilMahasiswa() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const res = await fetch('http://localhost:5000/api/auth/me', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -184,7 +184,7 @@ export default function ProfilMahasiswa() {
       const userId = localStorage.getItem('userId');
       if (userId) {
         try {
-          const response = await fetch(`http://localhost:5000/api/portfolios/${userId}`);
+          const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/portfolios/${userId}`);
           if (response.ok) {
             const data = await response.json();
             setPortofolio(data);
@@ -205,7 +205,7 @@ export default function ProfilMahasiswa() {
     const token = localStorage.getItem('token');
     const imgToSave = newPort.image || "/freelance5.png";
     try {
-      const response = await fetch('http://localhost:5000/api/portfolios', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/portfolios`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +261,7 @@ export default function ProfilMahasiswa() {
         const blob = await fetchResponse.blob();
         formData.append('ktp', blob, 'ktm.jpg');
         
-        const response = await fetch('http://localhost:5000/api/users/kyc', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/kyc`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`

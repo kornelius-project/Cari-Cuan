@@ -28,7 +28,7 @@ export default function DashboardMahasiswa() {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const response = await fetch('http://localhost:5000/api/wallet', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/wallet`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -120,7 +120,7 @@ export default function DashboardMahasiswa() {
     setIsWithdrawing(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/wallet/withdraw', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/wallet/withdraw`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -120,7 +120,7 @@ export default function ProfilBisnis() {
         const formData = new FormData();
         formData.append('ktp', file);
         
-        fetch('http://localhost:5000/api/users/kyc', {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/kyc`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData

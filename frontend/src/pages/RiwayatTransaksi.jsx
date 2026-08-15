@@ -26,7 +26,7 @@ export default function RiwayatTransaksi() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const response = await fetch('http://localhost:5000/api/wallet', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/wallet`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {

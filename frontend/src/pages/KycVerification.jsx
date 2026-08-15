@@ -28,7 +28,7 @@ function KycVerification() {
       const formData = new FormData();
       formData.append('ktp', file);
 
-      const response = await fetch('http://localhost:5000/api/users/kyc', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/kyc`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -133,7 +133,7 @@ function KycVerification() {
                    try {
                      const formData = new FormData();
                      formData.append('ktp', dummyFile);
-                     const response = await fetch('http://localhost:5000/api/users/kyc', {
+                     const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/kyc`, {
                        method: 'POST',
                        headers: { 'Authorization': `Bearer ${token}` },
                        body: formData

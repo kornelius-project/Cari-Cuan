@@ -40,7 +40,7 @@ export default function Navbar() {
     const userId = localStorage.getItem('userId');
     if (userId && authStatus.isLoggedIn) {
       // Fetch existing missed notifications
-      fetch(`http://localhost:5000/api/notifications/${userId}`)
+      fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/notifications/${userId}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data) && data.length > 0) {
@@ -58,7 +58,7 @@ export default function Navbar() {
         })
         .catch(console.error);
 
-      const socket = io('http://localhost:5000');
+      const socket = io(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}`);
       socket.emit('join', userId);
       
       socket.on('receiveNotification', (notif) => {
@@ -74,7 +74,7 @@ export default function Navbar() {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const response = await fetch('http://localhost:5000/api/wallet', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/wallet`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {

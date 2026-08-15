@@ -34,7 +34,7 @@ export default function CariLowongan() {
     e.preventDefault();
     setIsLoggingIn(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword, role: 'mahasiswa' })
@@ -69,9 +69,20 @@ export default function CariLowongan() {
       const user = JSON.parse(userStr);
       setKycVerified(user.kycStatus === 'VERIFIED');
     }
-    fetch('http://localhost:5000/api/jobs')
+    fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/jobs`)
       .then(res => res.json())
       .then(data => {
+        const categoryImages = {
+          'F&B': 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800',
+          'Digital Marketing': 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&q=80&w=800',
+          'Desain Grafis': 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80&w=800',
+          'Administrasi': 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=800',
+          'Pendidikan': 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800',
+          'Jasa': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800',
+          'IT / Web': 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+          'Fotografi': 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800',
+        };
+
         const mappedJobs = data.map(job => ({
           id: job.id,
           judul: job.title,
@@ -79,7 +90,7 @@ export default function CariLowongan() {
           durasi: "Sesuai kesepakatan", 
           umkm: job.umkm?.name || "UMKM",
           umkmId: job.umkm?.id,
-          logoPerusahaan: job.imageUrl || "/freelance6.jpg",
+          logoPerusahaan: job.imageUrl || categoryImages[job.category] || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&q=80&w=800",
           kategori: job.category || "Desain Grafis",
           tipeKerja: job.type || "Proyek Lepas",
           lokasi: job.location || "Remote",
@@ -388,13 +399,17 @@ export default function CariLowongan() {
           <div className="bg-white rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-slate-200">
             
             {/* Header Pop-up (Image Banner) */}
-            <div className="relative w-full h-48 md:h-64 bg-slate-100 shrink-0">
+            <div className="relative w-full h-64 md:h-80 bg-slate-900 shrink-0 overflow-hidden">
+              <div 
+                className="absolute inset-0 bg-cover bg-center blur-xl opacity-40 scale-110"
+                style={{ backgroundImage: `url(${selectedJob.logoPerusahaan})` }}
+              ></div>
               <img 
                 src={selectedJob.logoPerusahaan} 
                 alt={selectedJob.umkm} 
-                className="w-full h-full object-cover"
+                className="relative w-full h-full object-contain"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/40 to-transparent"></div>
               
               <button 
                 onClick={() => {
@@ -611,7 +626,7 @@ export default function CariLowongan() {
                               }
 
                               const token = localStorage.getItem('token');
-                              const response = await fetch('http://localhost:5000/api/applications', {
+                              const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/applications`, {
                                 method: 'POST',
                                 headers: {
                                   'Authorization': `Bearer ${token}`

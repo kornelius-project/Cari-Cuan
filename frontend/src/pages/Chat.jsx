@@ -33,7 +33,7 @@ export default function Chat() {
   // Init Socket
   useEffect(() => {
     if (authStatus.isLoggedIn && authStatus.userId) {
-      const newSocket = io('http://localhost:5000');
+      const newSocket = io(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}`);
       newSocket.on('connect', () => {
         newSocket.emit('join', authStatus.userId);
       });
@@ -46,7 +46,7 @@ export default function Chat() {
   const fetchContacts = async () => {
     if (!authStatus.userId) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/messages/contacts/${authStatus.userId}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/messages/contacts/${authStatus.userId}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setContacts(data);
@@ -80,7 +80,7 @@ export default function Chat() {
         setActiveChatDetails(contact);
       } else {
         // Fallback: If not in contacts, fetch the user details
-        fetch(`http://localhost:5000/api/users/${activeChat}`)
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/${activeChat}`)
           .then(res => res.json())
           .then(u => {
             if (u && !u.error) {
@@ -108,7 +108,7 @@ export default function Chat() {
       }
 
       // Fetch history
-      fetch(`http://localhost:5000/api/messages/history/${authStatus.userId}/${activeChat}`)
+      fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/messages/history/${authStatus.userId}/${activeChat}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {

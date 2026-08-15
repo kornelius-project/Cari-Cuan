@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -17,12 +17,12 @@ import ProfilBisnis from './pages/ProfilBisnis';
 import Chat from './pages/Chat';
 import ScrollToTop from './components/ScrollToTop';
 
-
-function App() {
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  
   return (
-    <Router>
-      <ScrollToTop />
-      <Routes>
+    <div key={location.pathname} className="animate-page-transition flex-1 flex flex-col min-h-screen">
+      <Routes location={location}>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -41,6 +41,15 @@ function App() {
         {/* Fallback route to redirect to home if URL is invalid */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <ScrollToTop />
+      <AnimatedRoutes />
     </Router>
   );
 }
